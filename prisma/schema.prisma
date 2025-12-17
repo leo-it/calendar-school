@@ -1,0 +1,124 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Escuela {
+  id        String   @id @default(cuid())
+  nombre    String
+  direccion String?
+  telefono  String?
+  email     String?
+  activa    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relaciones
+  usuarios     User[]
+  clases       Clase[]
+  invitaciones InvitacionProfesor[]
+}
+
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  name          String?
+  password      String
+  role          String   @default("ESTUDIANTE") // ADMIN, PROFESOR, ESTUDIANTE
+  phone         String?
+  emailVerified Boolean  @default(false)
+  escuelaId     String?
+  esAdminEscuela Boolean @default(false) // Indica si es el admin de su escuela
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relaciones
+  escuela          Escuela?            @relation(fields: [escuelaId], references: [id])
+  clasesSubscritas ClaseSubscription[]
+  notificaciones   Notificacion[]
+  invitacionesCreadas InvitacionProfesor[] @relation("CreadorInvitacion")
+}
+
+model Profesor {
+  id        String   @id @default(cuid())
+  name      String
+  email     String?  @unique
+  phone     String?
+  bio       String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  clases Clase[]
+}
+
+model Clase {
+  id          String    @id @default(cuid())
+  titulo      String
+  descripcion String?
+  diaSemana   Int // 0 = Domingo, 1 = Lunes, ..., 6 = Sábado
+  horaInicio  String
+  horaFin     String
+  nivel       String // PRINCIPIANTE, INTERMEDIO, AVANZADO
+  estilo      String // CONTEMPORANEO, JAZZ, BALLET, HIP_HOP, URBANO, OTRO
+  lugar       String // "Duo Tricks", "La Central", etc.
+  capacidad   Int       @default(20)
+  activa      Boolean   @default(true)
+  fechaInicio DateTime? // Fecha opcional de inicio de la recurrencia
+  fechaFin    DateTime? // Fecha opcional de fin de la recurrencia
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  profesorId String
+  profesor   Profesor @relation(fields: [profesorId], references: [id])
+  escuelaId  String
+  escuela    Escuela  @relation(fields: [escuelaId], references: [id])
+
+  subscriptions ClaseSubscription[]
+}
+
+model ClaseSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  claseId   String
+  createdAt DateTime @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  clase Clase @relation(fields: [claseId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, claseId])
+}
+
+model Notificacion {
+  id        String   @id @default(cuid())
+  userId    String
+  tipo      String // "EMAIL", "WHATSAPP", "AMBOS"
+  mensaje   String
+  enviada   Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model InvitacionProfesor {
+  id        String    @id @default(cuid())
+  codigo    String    @unique
+  escuelaId String?
+  usado     Boolean   @default(false)
+  usadoPor  String? // ID del usuario que usó el código
+  usadoEn   DateTime?
+  expiraEn  DateTime?
+  creadoPor String // ID del admin o profesor admin que creó el código
+  createdAt DateTime  @default(now())
+
+  escuela Escuela? @relation(fields: [escuelaId], references: [id], onDelete: Cascade)
+  creador User     @relation("CreadorInvitacion", fields: [creadoPor], references: [id])
+
+  @@index([codigo])
+}
