@@ -90,6 +90,52 @@ almanaque/
 - [ ] Sistema de preferencias de notificación por usuario
 - [ ] Exportar calendario a iCal/Google Calendar
 
+## 🧩 Arquitectura de Microfrontends
+
+Este proyecto está preparado para ser convertido en una arquitectura de microfrontends en el futuro. 
+
+### Estado Actual
+
+El proyecto actualmente es una aplicación monolítica Next.js, pero su estructura permite una migración gradual hacia microfrontends si es necesario.
+
+### ¿Cuándo considerar Microfrontends?
+
+- **Múltiples equipos** trabajando en diferentes módulos
+- **Necesidad de escalar** módulos independientemente
+- **Diferentes ciclos de release** por funcionalidad
+- **Integración** con otros sistemas existentes
+
+### Preparación para Microfrontends
+
+El proyecto puede ser estructurado como microfrontends usando:
+
+1. **Module Federation** (Webpack 5) - Para Next.js
+2. **Componentes como librería NPM** - Para reutilización
+3. **Next.js Standalone** - Como microfrontend independiente
+
+### Estructura Propuesta
+
+```
+almanaque/
+├── microfrontends/
+│   ├── calendario/          # Microfrontend del calendario
+│   ├── admin/               # Microfrontend de administración
+│   └── shared/              # Componentes compartidos
+└── shell/                   # Aplicación shell (host)
+```
+
+### Documentación Detallada
+
+Para más información sobre la preparación para microfrontends, consulta:
+- [MEJORAS_ARQUITECTURA.md](./MEJORAS_ARQUITECTURA.md) - Sección "MICROFRONTENDS"
+
+### Beneficios Potenciales
+
+- ✅ **Despliegue independiente** de módulos
+- ✅ **Equipos autónomos** trabajando en paralelo
+- ✅ **Escalabilidad** horizontal por módulo
+- ✅ **Aislamiento de errores** entre módulos
+
 ## Licencia
 
 MIT
