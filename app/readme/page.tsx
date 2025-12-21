@@ -5,7 +5,13 @@ import ReactMarkdown from 'react-markdown'
 export default async function ReadmePage() {
   // Leer el archivo README.md
   const filePath = join(process.cwd(), 'README.md')
-  const content = await readFile(filePath, 'utf-8')
+  let content = ''
+  try {
+    content = await readFile(filePath, 'utf-8')
+  } catch (error) {
+    // Si el archivo no existe (por ejemplo, en Docker build), usar contenido por defecto
+    content = '# Almanaque de Clases\n\nDocumentación no disponible en este momento.'
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">

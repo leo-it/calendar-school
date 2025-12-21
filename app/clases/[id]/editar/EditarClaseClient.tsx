@@ -79,7 +79,7 @@ export default function EditarClaseClient({
 
       // Cargar nombre del profesor si existe (después de cargar profesores)
       if (clase.profesorId && profesoresData.length > 0) {
-        const profesorEncontrado = profesoresData.find(p => p.id === clase.profesorId)
+        const profesorEncontrado = profesoresData.find((p: Profesor) => p.id === clase.profesorId)
         if (profesorEncontrado) {
           setProfesorBuscado(profesorEncontrado.name)
         }

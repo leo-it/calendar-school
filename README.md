@@ -18,9 +18,12 @@ Sistema de gestión de clases de danza con calendario interactivo, filtros avanz
 - **Prisma** (ORM)
 - **NextAuth.js** (Autenticación)
 - **Tailwind CSS** (Estilos)
-- **SQLite** (Base de datos - fácil migrar a PostgreSQL)
+- **PostgreSQL** (Base de datos)
+- **Docker** (Contenerización)
 
-## Instalación
+## Instalación (Desarrollo Local)
+
+**Nota**: Para desarrollo local, se recomienda usar Docker (ver sección siguiente). Esta instalación requiere PostgreSQL corriendo localmente.
 
 1. Instalar dependencias:
 ```bash
@@ -29,12 +32,18 @@ npm install
 
 2. Configurar variables de entorno:
 ```bash
-cp .env.example .env
+# Crear archivo .env
+cat > .env << EOF
+DATABASE_URL=postgresql://usuario:password@localhost:5432/almanaque?schema=public
+NEXTAUTH_URL=http://localhost:7000
+NEXTAUTH_SECRET=$(openssl rand -base64 32)
+NODE_ENV=development
+EOF
 ```
 
 Editar `.env` y configurar:
-- `DATABASE_URL`: URL de la base de datos
-- `NEXTAUTH_SECRET`: Secret key para NextAuth (generar con `openssl rand -base64 32`)
+- `DATABASE_URL`: URL de la base de datos PostgreSQL (debe estar corriendo)
+- `NEXTAUTH_SECRET`: Secret key para NextAuth (ya generado arriba)
 - Configuraciones opcionales para email/WhatsApp
 
 3. Inicializar base de datos:
@@ -43,11 +52,12 @@ npx prisma generate
 npx prisma db push
 ```
 
-4. (Opcional) Crear usuario admin inicial:
+4. (Opcional) Crear datos iniciales:
 ```bash
-npm run dev
+npm run seed
 ```
-Luego usar el script de seed o crear manualmente desde Prisma Studio:
+
+O usar Prisma Studio para crear datos manualmente:
 ```bash
 npx prisma studio
 ```
@@ -57,7 +67,90 @@ npx prisma studio
 npm run dev
 ```
 
-Abrir [http://localhost:3000](http://localhost:3000)
+Abrir [http://localhost:7000](http://localhost:7000) (puerto configurado en package.json)
+
+## Instalación con Docker (Recomendado)
+
+La aplicación está completamente contenerizada y lista para producción usando Docker y Docker Compose.
+
+### Prerrequisitos
+- Docker Engine 20.10+
+- Docker Compose 2.0+
+
+### Pasos de Instalación
+
+1. **Clonar el repositorio** (si aún no lo has hecho)
+
+2. **Configurar variables de entorno**:
+```bash
+# El archivo .env ya está creado con valores por defecto para desarrollo
+# Si necesitas regenerar el NEXTAUTH_SECRET:
+openssl rand -base64 32
+
+# Editar .env y actualizar NEXTAUTH_SECRET si es necesario
+# Las variables ya configuradas son:
+# - DATABASE_URL: postgresql://almanaque:almanaque_dev_password@postgres:5432/almanaque?schema=public
+# - NEXTAUTH_URL: http://localhost:3000
+# - NEXTAUTH_SECRET: (generado automáticamente)
+# - NODE_ENV: production
+```
+
+3. **Construir y levantar los contenedores**:
+```bash
+docker compose up -d --build
+```
+
+4. **Inicializar la base de datos**:
+```bash
+# Las tablas se crean automáticamente al levantar los contenedores
+# Si necesitas recrear la base de datos, ejecuta:
+docker compose exec postgres psql -U almanaque -d almanaque -c "SELECT 1;" || \
+  docker compose exec postgres psql -U almanaque -c "CREATE DATABASE almanaque;"
+
+# (Opcional) Ejecutar seed para datos iniciales desde tu máquina local:
+DATABASE_URL="postgresql://almanaque:almanaque_dev_password@localhost:5432/almanaque" npm run seed
+```
+
+5. **Acceder a la aplicación**:
+   - Aplicación: [http://localhost:3000](http://localhost:3000)
+   - PostgreSQL: `localhost:5432` (usuario: `almanaque`, password: `almanaque_dev_password`)
+
+### Comandos Útiles
+
+```bash
+# Ver logs de los contenedores
+docker compose logs -f app
+
+# Ver logs de PostgreSQL
+docker compose logs -f postgres
+
+# Ver estado de los contenedores
+docker compose ps
+
+# Detener los contenedores
+docker compose down
+
+# Detener y eliminar volúmenes (⚠️ elimina la base de datos)
+docker compose down -v
+
+# Reconstruir solo la aplicación
+docker compose build app
+
+# Reiniciar los contenedores
+docker compose restart
+
+# Acceder a la base de datos directamente
+docker compose exec postgres psql -U almanaque -d almanaque
+```
+
+### Notas Importantes
+
+- **Producción**: Cambiar las contraseñas por defecto en `docker-compose.yml` y `.env` antes de desplegar
+- **Variables de entorno**: Para producción, usar un archivo `.env.production` o un gestor de secretos
+- **Volúmenes**: Los datos de PostgreSQL se persisten en el volumen `postgres_data`
+- **Base de datos**: Las tablas se crean automáticamente al levantar los contenedores por primera vez
+- **Prisma**: El schema está configurado para PostgreSQL con binaryTargets para Alpine Linux (ARM64)
+- **Puerto**: La aplicación corre en el puerto 3000 (configurado en docker-compose.yml)
 
 ## Estructura del Proyecto
 
@@ -148,11 +241,11 @@ El objetivo principal ahora es llevar la aplicación a un entorno de producción
 I. ⚙️ Ingeniería de Plataforma (DevOps) - PRIORIDAD ALTA
 Esta fase es crucial para asegurar la confiabilidad y el despliegue automático del proyecto.
 
-[ ] 1. Contenerización Completa (Docker):
+[x] 1. Contenerización Completa (Docker):
 
-[ ] Crear un Dockerfile optimizado para el Front/Back de Next.js (con multi-stage build).
+[x] Crear un Dockerfile optimizado para el Front/Back de Next.js (con multi-stage build).
 
-[ ] Crear un docker-compose.yml para correr Next.js y PostgreSQL (en lugar de SQLite) localmente.
+[x] Crear un docker-compose.yml para correr Next.js y PostgreSQL (en lugar de SQLite) localmente.
 
 [ ] 2. Infraestructura como Código (IaC):
 

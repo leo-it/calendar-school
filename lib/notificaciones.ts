@@ -15,7 +15,9 @@ export async function enviarNotificaciones(claseId: string) {
   })
 
   for (const sub of subscriptions) {
-    const mensaje = `Nueva actualización en la clase "${sub.clase.titulo}" con ${sub.clase.profesor.name} el ${new Date(sub.clase.fecha).toLocaleDateString('es-ES')} a las ${sub.clase.horaInicio}`
+    const diasSemana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
+    const diaSemana = diasSemana[sub.clase.diaSemana] || 'Día no especificado'
+    const mensaje = `Nueva actualización en la clase "${sub.clase.titulo}" con ${sub.clase.profesor.name} los ${diaSemana}s a las ${sub.clase.horaInicio}`
 
     // Crear registro de notificación
     await prisma.notificacion.create({

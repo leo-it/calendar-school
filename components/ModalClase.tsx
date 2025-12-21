@@ -8,6 +8,7 @@ import { Nivel, Estilo } from '@/types/enums'
 
 interface ClaseConProfesor extends Clase {
   profesor: Profesor
+  fecha?: Date | string // Fecha específica de la ocurrencia (añadida por la API del calendario)
 }
 
 interface ModalClaseProps {
@@ -227,7 +228,9 @@ export default function ModalClase({
               <div>
                 <h3 className="text-sm font-semibold text-gray-700 mb-1">Fecha</h3>
                 <p className="text-gray-900">
-                  {format(parseISO(clase.fecha.toString()), "EEEE, d 'de' MMMM 'de' yyyy", { locale: es })}
+                  {clase.fecha 
+                    ? format(parseISO(clase.fecha.toString()), "EEEE, d 'de' MMMM 'de' yyyy", { locale: es })
+                    : 'Fecha no especificada'}
                 </p>
               </div>
               <div>
