@@ -202,14 +202,61 @@ Luego descomenta el job `deploy` en `.github/workflows/ci-cd.yml`
 
 ## Troubleshooting
 
-### Error: "Cannot connect to database"
+### Error: "Application error: a server-side exception has occurred"
+
+Este es un error común. Sigue estos pasos para diagnosticarlo:
+
+**1. Ver los logs del servidor en Railway:**
+   - Ve al servicio de tu aplicación en Railway
+   - Click en la pestaña **"Deployments"** o **"Logs"**
+   - Revisa los logs más recientes para ver el error específico
+   - Los errores comunes son:
+
+**2. Error: "Cannot connect to database" o "PrismaClientInitializationError"**
+   - **Causa**: `DATABASE_URL` no está configurada o es incorrecta
+   - **Solución**:
+     - Verifica que la variable `DATABASE_URL` esté en el servicio de la aplicación (no solo en PostgreSQL)
+     - Usa la referencia: `${{Postgres.DATABASE_URL}}` (reemplaza "Postgres" con el nombre exacto de tu servicio)
+     - O copia directamente el valor desde el servicio PostgreSQL → Variables → `DATABASE_URL`
+
+**3. Error: "Prisma Client initialization error" o "binaryTarget"**
+   - **Causa**: Prisma Client no está generado correctamente para la arquitectura del servidor
+   - **Solución**: El `schema.prisma` ya está configurado correctamente. Si persiste:
+     - Verifica que el build se completó correctamente
+     - Revisa los logs del build en Railway
+
+**4. Error: "NEXTAUTH_SECRET is missing"**
+   - **Causa**: La variable `NEXTAUTH_SECRET` no está configurada
+   - **Solución**: Añade la variable `NEXTAUTH_SECRET` con un valor generado con `openssl rand -base64 32`
+
+**5. Error: "Module not found" o errores de importación**
+   - **Causa**: Dependencias faltantes o build incompleto
+   - **Solución**: 
+     - Verifica que el Dockerfile esté correcto
+     - Revisa los logs del build para ver si hay errores de compilación
+
+**6. La aplicación no inicia**
+   - Verifica que el puerto esté configurado correctamente
+   - Railway usa la variable `PORT` automáticamente, pero Next.js usa `3000` por defecto
+   - Añade `PORT=3000` en las variables de entorno si es necesario
+
+**Cómo ver logs en Railway:**
+1. Ve a tu proyecto en Railway
+2. Click en el servicio de la aplicación
+3. Ve a la pestaña **"Deployments"**
+4. Click en el deployment más reciente
+5. Verás los logs en tiempo real
+6. O ve a la pestaña **"Logs"** para ver todos los logs
+
+### Error: "Cannot connect to database" (más específico)
 - Verifica que `DATABASE_URL` esté correctamente configurada
 - En Render, usa la "Internal Database URL" (no la externa)
-- En Railway, usa la variable `DATABASE_URL` que Railway genera
+- En Railway, usa la variable `DATABASE_URL` que Railway genera o la referencia `${{Postgres.DATABASE_URL}}`
 
 ### Error: "Prisma Client initialization error"
 - Verifica que el binaryTarget en `prisma/schema.prisma` sea correcto
-- Para Railway/Render (Linux x64): `linux-musl-x64-openssl-3.0.x`
+- Para Railway/Render (Linux x64): `linux-musl-openssl-3.0.x`
+- El schema ya está configurado correctamente con los binaryTargets necesarios
 
 ### La aplicación se duerme (Render Free)
 - Esto es normal en el plan gratuito de Render
