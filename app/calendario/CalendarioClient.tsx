@@ -31,7 +31,7 @@ export default function CalendarioClient({ user }: { user: { id: string; email: 
   // Filtros
   const [filtroProfesor, setFiltroProfesor] = useState<string>('todos')
   const [filtroNivel, setFiltroNivel] = useState<Nivel | 'todos'>('todos')
-  const [filtroEstilo, setFiltroEstilo] = useState<Estilo | 'todos'>('todos')
+  const [filtroEstilo, setFiltroEstilo] = useState<string | 'todos'>('todos')
   const [filtroLugar, setFiltroLugar] = useState<string>('todos')
   const [profesores, setProfesores] = useState<Profesor[]>([])
   const [nombreEscuela, setNombreEscuela] = useState<string | null>(null)
@@ -154,6 +154,9 @@ export default function CalendarioClient({ user }: { user: { id: string; email: 
 
   // Filtrar lugares solo de las clases visibles (ya filtradas por escuela)
   const lugares = Array.from(new Set(clases.map(c => c.lugar)))
+  
+  // Filtrar estilos únicos de las clases visibles (ya filtradas por escuela)
+  const estilos = Array.from(new Set(clases.map(c => c.estilo))).sort()
   
   // Filtrar profesores solo de las clases visibles (ya filtradas por escuela)
   const profesoresVisibles = Array.from(
@@ -352,6 +355,7 @@ export default function CalendarioClient({ user }: { user: { id: string; email: 
             filtroEstilo={filtroEstilo}
             filtroLugar={filtroLugar}
             lugares={lugares}
+            estilos={estilos}
             onProfesorChange={setFiltroProfesor}
             onNivelChange={setFiltroNivel}
             onEstiloChange={setFiltroEstilo}

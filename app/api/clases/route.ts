@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { getDay } from 'date-fns'
 
 export async function GET(request: NextRequest) {
   try {
@@ -20,10 +19,11 @@ export async function GET(request: NextRequest) {
     }
 
     // Normalizar fechas para evitar problemas de zona horaria
+    // Usar UTC para mantener consistencia
     const fechaInicio = new Date(inicio)
-    fechaInicio.setHours(0, 0, 0, 0)
+    fechaInicio.setUTCHours(0, 0, 0, 0)
     const fechaFin = new Date(fin)
-    fechaFin.setHours(23, 59, 59, 999)
+    fechaFin.setUTCHours(23, 59, 59, 999)
 
     // Obtener el usuario completo para acceder a su escuelaId
     const user = await prisma.user.findUnique({
@@ -71,26 +71,28 @@ export async function GET(request: NextRequest) {
     // Generar ocurrencias de clases para el rango de fechas
     const clasesGeneradas: any[] = []
     const fechaActual = new Date(fechaInicio)
-    fechaActual.setHours(0, 0, 0, 0)
+    fechaActual.setUTCHours(0, 0, 0, 0)
     
     // Crear una fecha límite normalizada para la comparación
     const fechaFinNormalizada = new Date(fechaFin)
-    fechaFinNormalizada.setHours(23, 59, 59, 999)
+    fechaFinNormalizada.setUTCHours(23, 59, 59, 999)
 
     while (fechaActual <= fechaFinNormalizada) {
-      const diaSemana = getDay(fechaActual) // 0 = Domingo, 1 = Lunes, etc.
+      // Usar getUTCDay() para evitar problemas de zona horaria
+      // 0 = Domingo, 1 = Lunes, etc.
+      const diaSemana = fechaActual.getUTCDay()
       
       // Buscar clases que coincidan con este día de la semana
       const clasesDelDia = clasesRecurrentes.filter((clase: typeof clasesRecurrentes[0]) => {
         // Verificar si hay restricciones de fecha
         if (clase.fechaInicio) {
           const fechaInicioClase = new Date(clase.fechaInicio)
-          fechaInicioClase.setHours(0, 0, 0, 0)
+          fechaInicioClase.setUTCHours(0, 0, 0, 0)
           if (fechaActual < fechaInicioClase) return false
         }
         if (clase.fechaFin) {
           const fechaFinClase = new Date(clase.fechaFin)
-          fechaFinClase.setHours(23, 59, 59, 999)
+          fechaFinClase.setUTCHours(23, 59, 59, 999)
           if (fechaActual > fechaFinClase) return false
         }
         
@@ -100,7 +102,7 @@ export async function GET(request: NextRequest) {
       // Generar una ocurrencia para cada clase del día
       clasesDelDia.forEach((clase: typeof clasesRecurrentes[0]) => {
         const fechaClase = new Date(fechaActual)
-        fechaClase.setHours(0, 0, 0, 0)
+        fechaClase.setUTCHours(0, 0, 0, 0)
         clasesGeneradas.push({
           ...clase,
           fecha: fechaClase,
@@ -108,8 +110,8 @@ export async function GET(request: NextRequest) {
         })
       })
 
-      // Avanzar al siguiente día
-      fechaActual.setDate(fechaActual.getDate() + 1)
+      // Avanzar al siguiente día en UTC
+      fechaActual.setUTCDate(fechaActual.getUTCDate() + 1)
     }
 
     // Ordenar por fecha y hora

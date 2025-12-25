@@ -1,18 +1,19 @@
 'use client'
 
 import { Profesor } from '@prisma/client'
-import { Nivel, Estilo } from '@/types/enums'
+import { Nivel } from '@/types/enums'
 
 interface FiltrosProps {
   profesores: Profesor[]
   filtroProfesor: string
   filtroNivel: Nivel | 'todos'
-  filtroEstilo: Estilo | 'todos'
+  filtroEstilo: string | 'todos'
   filtroLugar: string
   lugares: string[]
+  estilos: string[] // Estilos únicos de las clases en la BD
   onProfesorChange: (value: string) => void
   onNivelChange: (value: Nivel | 'todos') => void
-  onEstiloChange: (value: Estilo | 'todos') => void
+  onEstiloChange: (value: string | 'todos') => void
   onLugarChange: (value: string) => void
 }
 
@@ -23,13 +24,13 @@ export default function Filtros({
   filtroEstilo,
   filtroLugar,
   lugares,
+  estilos,
   onProfesorChange,
   onNivelChange,
   onEstiloChange,
   onLugarChange,
 }: FiltrosProps) {
   const niveles: (Nivel | 'todos')[] = ['todos', 'PRINCIPIANTE', 'INTERMEDIO', 'AVANZADO']
-  const estilos: (Estilo | 'todos')[] = ['todos', 'CONTEMPORANEO', 'JAZZ', 'BALLET', 'HIP_HOP', 'URBANO', 'OTRO']
 
   return (
     <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
@@ -43,7 +44,7 @@ export default function Filtros({
           <select
             value={filtroProfesor}
             onChange={(e) => onProfesorChange(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900"
           >
             <option value="todos">Todos</option>
             {profesores.map((profesor) => (
@@ -62,7 +63,7 @@ export default function Filtros({
           <select
             value={filtroNivel}
             onChange={(e) => onNivelChange(e.target.value as Nivel | 'todos')}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900"
           >
             {niveles.map((nivel) => (
               <option key={nivel} value={nivel}>
@@ -79,12 +80,13 @@ export default function Filtros({
           </label>
           <select
             value={filtroEstilo}
-            onChange={(e) => onEstiloChange(e.target.value as Estilo | 'todos')}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            onChange={(e) => onEstiloChange(e.target.value)}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900"
           >
+            <option value="todos">Todos</option>
             {estilos.map((estilo) => (
               <option key={estilo} value={estilo}>
-                {estilo === 'todos' ? 'Todos' : estilo.replace('_', ' ').charAt(0) + estilo.replace('_', ' ').slice(1).toLowerCase()}
+                {estilo}
               </option>
             ))}
           </select>
@@ -98,7 +100,7 @@ export default function Filtros({
           <select
             value={filtroLugar}
             onChange={(e) => onLugarChange(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900"
           >
             <option value="todos">Todos</option>
             {lugares.map((lugar) => (

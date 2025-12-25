@@ -59,8 +59,12 @@ function VistaDia({
 }) {
   const clasesDelDia = clases.filter((clase) => {
     if (!clase.fecha) return false
-    const fechaClase = parseISO(clase.fecha.toString())
-    return isSameDay(fechaClase, fecha)
+    // Normalizar ambas fechas a medianoche UTC para evitar problemas de zona horaria
+    const fechaClase = new Date(clase.fecha.toString())
+    fechaClase.setUTCHours(0, 0, 0, 0)
+    const fechaNormalizada = new Date(fecha)
+    fechaNormalizada.setUTCHours(0, 0, 0, 0)
+    return fechaClase.getTime() === fechaNormalizada.getTime()
   })
 
   return (
@@ -107,9 +111,26 @@ function VistaSemana({
   onClaseActualizada: () => void
   onCambiarVista?: (vista: Vista, fecha?: Date) => void
 }) {
-  const inicioSemana = startOfWeek(fecha, { weekStartsOn: 1 })
-  const finSemana = addDays(inicioSemana, 6)
-  const dias = Array.from({ length: 7 }, (_, i) => addDays(inicioSemana, i))
+  // Normalizar la fecha a medianoche UTC primero
+  const fechaUTC = new Date(fecha)
+  fechaUTC.setUTCHours(0, 0, 0, 0)
+  
+  // Calcular el inicio de semana en UTC
+  // getUTCDay() devuelve 0=Domingo, 1=Lunes, etc.
+  // Si weekStartsOn: 1 (lunes), necesitamos retroceder (diaSemana - 1) días
+  const diaSemanaUTC = fechaUTC.getUTCDay()
+  const diasDesdeLunes = diaSemanaUTC === 0 ? 6 : diaSemanaUTC - 1 // Si es domingo (0), retroceder 6 días
+  const inicioSemana = new Date(fechaUTC)
+  inicioSemana.setUTCDate(inicioSemana.getUTCDate() - diasDesdeLunes)
+  
+  const finSemana = new Date(inicioSemana)
+  finSemana.setUTCDate(finSemana.getUTCDate() + 6)
+  
+  const dias = Array.from({ length: 7 }, (_, i) => {
+    const dia = new Date(inicioSemana)
+    dia.setUTCDate(dia.getUTCDate() + i)
+    return dia
+  })
 
   // Determinar si todos los días están en el mismo mes
   const mismoMes = dias.every(dia => format(dia, 'MMM yyyy', { locale: es }) === format(inicioSemana, 'MMM yyyy', { locale: es }))
@@ -159,8 +180,12 @@ function VistaSemana({
         {dias.map((dia) => {
           const clasesDelDia = clases.filter((clase) => {
             if (!clase.fecha) return false
-            const fechaClase = parseISO(clase.fecha.toString())
-            return isSameDay(fechaClase, dia)
+            // Normalizar ambas fechas a medianoche UTC para evitar problemas de zona horaria
+            const fechaClase = new Date(clase.fecha.toString())
+            fechaClase.setUTCHours(0, 0, 0, 0)
+            const diaNormalizado = new Date(dia)
+            diaNormalizado.setUTCHours(0, 0, 0, 0)
+            return fechaClase.getTime() === diaNormalizado.getTime()
           })
 
           return (
@@ -193,8 +218,12 @@ function VistaSemana({
         {dias.map((dia) => {
           const clasesDelDia = clases.filter((clase) => {
             if (!clase.fecha) return false
-            const fechaClase = parseISO(clase.fecha.toString())
-            return isSameDay(fechaClase, dia)
+            // Normalizar ambas fechas a medianoche UTC para evitar problemas de zona horaria
+            const fechaClase = new Date(clase.fecha.toString())
+            fechaClase.setUTCHours(0, 0, 0, 0)
+            const diaNormalizado = new Date(dia)
+            diaNormalizado.setUTCHours(0, 0, 0, 0)
+            return fechaClase.getTime() === diaNormalizado.getTime()
           })
 
           const esHoy = isSameDay(dia, new Date())
