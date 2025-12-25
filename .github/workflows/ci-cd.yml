@@ -30,6 +30,11 @@ jobs:
       - name: Instalar dependencias
         run: npm ci
 
+      - name: Generar Prisma Client
+        run: npx prisma generate
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/test
+
       - name: Ejecutar ESLint
         run: npm run lint || true # Continúa aunque falle (ajustar según necesidad)
 
