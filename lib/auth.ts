@@ -3,18 +3,21 @@ import CredentialsProvider from 'next-auth/providers/credentials'
 import { prisma } from './prisma'
 import bcrypt from 'bcryptjs'
 
-// Debug: Verificar variables de entorno (solo en producción para debugging)
-if (process.env.NODE_ENV === 'production') {
-  console.log('🔍 [DEBUG] Verificando variables de entorno:')
-  console.log('  - NODE_ENV:', process.env.NODE_ENV)
-  console.log('  - NEXTAUTH_SECRET:', process.env.NEXTAUTH_SECRET ? '✅ Configurado (' + process.env.NEXTAUTH_SECRET.substring(0, 10) + '...)' : '❌ NO CONFIGURADO')
-  console.log('  - NEXTAUTH_URL:', process.env.NEXTAUTH_URL || '❌ NO CONFIGURADO')
-  console.log('  - DATABASE_URL:', process.env.DATABASE_URL ? '✅ Configurado' : '❌ NO CONFIGURADO')
-  
-  if (!process.env.NEXTAUTH_SECRET) {
-    console.error('❌ ERROR CRÍTICO: NEXTAUTH_SECRET no está configurado en producción!')
-    console.error('Por favor, añade la variable NEXTAUTH_SECRET en Railway.')
-  }
+// Debug: Verificar variables de entorno (siempre mostrar en producción)
+console.log('🔍 [AUTH DEBUG] Inicializando NextAuth...')
+console.log('  - NODE_ENV:', process.env.NODE_ENV)
+console.log('  - NEXTAUTH_SECRET existe:', !!process.env.NEXTAUTH_SECRET)
+if (process.env.NEXTAUTH_SECRET) {
+  console.log('  - NEXTAUTH_SECRET (primeros 10 chars):', process.env.NEXTAUTH_SECRET.substring(0, 10) + '...')
+} else {
+  console.error('  - NEXTAUTH_SECRET: ❌ NO CONFIGURADO')
+}
+console.log('  - NEXTAUTH_URL:', process.env.NEXTAUTH_URL || '❌ NO CONFIGURADO')
+console.log('  - DATABASE_URL existe:', !!process.env.DATABASE_URL)
+
+if (!process.env.NEXTAUTH_SECRET) {
+  console.error('❌ ERROR CRÍTICO: NEXTAUTH_SECRET no está definido!')
+  console.error('Por favor, añade la variable NEXTAUTH_SECRET en Railway.')
 }
 
 export const authOptions: NextAuthOptions = {
