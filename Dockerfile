@@ -53,6 +53,8 @@ COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
+# Copiar node_modules/.bin para tener acceso a los binarios
+COPY --from=builder /app/node_modules/.bin ./node_modules/.bin
 
 # Copiar script de inicio
 COPY --from=builder /app/start.sh ./start.sh

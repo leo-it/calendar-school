@@ -52,13 +52,30 @@ echo "✅ Variables verificadas."
 
 # Verificar si las tablas existen y crearlas si no existen
 echo "🔍 Verificando si las tablas de la base de datos existen..."
-# Intentar crear las tablas (db push es idempotente, no hace daño si ya existen)
-echo "📦 Ejecutando Prisma db push para crear/actualizar tablas..."
-npx prisma db push --accept-data-loss --skip-generate
-if [ $? -eq 0 ]; then
-  echo "✅ Tablas verificadas/creadas exitosamente"
+
+# Buscar prisma en node_modules
+PRISMA_BIN=""
+if [ -f "./node_modules/.bin/prisma" ]; then
+  PRISMA_BIN="./node_modules/.bin/prisma"
+elif [ -f "./node_modules/prisma/build/index.js" ]; then
+  PRISMA_BIN="node ./node_modules/prisma/build/index.js"
+elif command -v npx > /dev/null 2>&1; then
+  PRISMA_BIN="npx prisma"
 else
-  echo "⚠️  Error al crear tablas, pero continuando..."
+  echo "⚠️  Prisma no encontrado, intentando continuar sin crear tablas..."
+  PRISMA_BIN=""
+fi
+
+if [ -n "$PRISMA_BIN" ]; then
+  echo "📦 Ejecutando Prisma db push para crear/actualizar tablas..."
+  $PRISMA_BIN db push --accept-data-loss --skip-generate
+  if [ $? -eq 0 ]; then
+    echo "✅ Tablas verificadas/creadas exitosamente"
+  else
+    echo "⚠️  Error al crear tablas, pero continuando..."
+  fi
+else
+  echo "⚠️  No se pudo encontrar Prisma, las tablas deben crearse manualmente"
 fi
 
 echo "🚀 Iniciando aplicación..."
