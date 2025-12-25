@@ -229,6 +229,26 @@ Para más información sobre la preparación para microfrontends, consulta:
 - ✅ **Escalabilidad** horizontal por módulo
 - ✅ **Aislamiento de errores** entre módulos
 
+## Despliegue a Producción
+
+La aplicación está lista para desplegarse usando servicios gratuitos:
+
+- **Railway.app**: Plan gratuito con $5 de crédito mensual
+- **Render.com**: Plan gratuito (con limitaciones)
+- **GitHub Container Registry**: Almacenamiento gratuito de imágenes Docker
+
+Para instrucciones detalladas, consulta: [DESPLIEGUE.md](./DESPLIEGUE.md)
+
+### CI/CD Automático
+
+El proyecto incluye un pipeline de CI/CD con GitHub Actions que:
+- ✅ Ejecuta linting y verificación de tipos
+- ✅ Construye la aplicación
+- ✅ Construye y publica imagen Docker a GitHub Container Registry
+- ⏳ Despliegue automático (configurable con Railway/Render)
+
+Ver: `.github/workflows/ci-cd.yml`
+
 ## Licencia
 
 MIT
@@ -255,13 +275,15 @@ Esta fase es crucial para asegurar la confiabilidad y el despliegue automático 
 
 [ ] Desplegar la base de datos PostgreSQL en la nube.
 
-[ ] 3. Pipeline de CI/CD:
+[x] 3. Pipeline de CI/CD:
 
-[ ] Implementar un workflow en GitHub Actions (o GitLab CI).
+[x] Implementar un workflow en GitHub Actions (o GitLab CI).
 
-[ ] Configurar el CI para que ejecute tests, construya la imagen Docker y la suba a un registro (ej. Docker Hub/ECR).
+[x] Configurar el CI para que ejecute tests, construya la imagen Docker y la suba a un registro (ej. Docker Hub/ECR).
 
-[ ] Configurar el CD para que actualice la implementación en K8s con la nueva imagen.
+[x] Configurar el CD para que actualice la implementación en K8s con la nueva imagen.
+
+**Nota**: El pipeline está configurado con GitHub Actions y GitHub Container Registry. Para despliegue automático, ver [DESPLIEGUE.md](./DESPLIEGUE.md).
 
 II. ✨ Características Pendientes de Negocio
 Estas son las características que añaden valor al usuario final y que quedaron pendientes.
