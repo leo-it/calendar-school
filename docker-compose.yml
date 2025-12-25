@@ -1,0 +1,66 @@
+version: '3.8'
+
+services:
+  # Base de datos PostgreSQL
+  postgres:
+    image: postgres:16-alpine
+    container_name: almanaque-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: almanaque
+      POSTGRES_PASSWORD: almanaque_dev_password
+      POSTGRES_DB: almanaque
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U almanaque"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - almanaque-network
+
+  # Aplicación Next.js
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: almanaque-app
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      # Base de datos
+      DATABASE_URL: postgresql://almanaque:almanaque_dev_password@postgres:5432/almanaque?schema=public
+      
+      # NextAuth
+      NEXTAUTH_URL: http://localhost:3000
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-change-this-secret-in-production}
+      
+      # Node environment
+      NODE_ENV: production
+      
+      # Opcionales para notificaciones (configurar según necesidad)
+      # EMAIL_SERVER: smtp://user:pass@smtp.example.com:587
+      # WHATSAPP_API_KEY: your-whatsapp-api-key
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - almanaque-network
+    # Volúmenes comentados - descomentar para desarrollo con hot-reload
+    # volumes:
+    #   - .:/app
+    #   - /app/node_modules
+    #   - /app/.next
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  almanaque-network:
+    driver: bridge
+

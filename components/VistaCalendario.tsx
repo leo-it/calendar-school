@@ -9,6 +9,7 @@ type Vista = 'dia' | 'semana'
 
 interface ClaseConProfesor extends Clase {
   profesor: Profesor
+  fecha?: Date | string // Fecha específica de la ocurrencia (añadida por la API del calendario)
 }
 
 interface VistaCalendarioProps {
@@ -57,6 +58,7 @@ function VistaDia({
   onCambiarVista?: (vista: Vista, fecha?: Date) => void
 }) {
   const clasesDelDia = clases.filter((clase) => {
+    if (!clase.fecha) return false
     const fechaClase = parseISO(clase.fecha.toString())
     return isSameDay(fechaClase, fecha)
   })
@@ -156,6 +158,7 @@ function VistaSemana({
       <div className="hidden md:grid md:grid-cols-7 min-h-[400px]">
         {dias.map((dia) => {
           const clasesDelDia = clases.filter((clase) => {
+            if (!clase.fecha) return false
             const fechaClase = parseISO(clase.fecha.toString())
             return isSameDay(fechaClase, dia)
           })
@@ -189,6 +192,7 @@ function VistaSemana({
       <div className="md:hidden">
         {dias.map((dia) => {
           const clasesDelDia = clases.filter((clase) => {
+            if (!clase.fecha) return false
             const fechaClase = parseISO(clase.fecha.toString())
             return isSameDay(fechaClase, dia)
           })

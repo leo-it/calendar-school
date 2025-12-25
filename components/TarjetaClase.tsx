@@ -10,6 +10,7 @@ import ModalClase from './ModalClase'
 
 interface ClaseConProfesor extends Clase {
   profesor: Profesor
+  fecha?: Date | string // Fecha específica de la ocurrencia (añadida por la API del calendario)
 }
 
 interface TarjetaClaseProps {
@@ -195,7 +196,9 @@ export default function TarjetaClase({
           <div className="flex items-center text-sm text-gray-700">
             <span className="font-medium">Fecha:</span>
             <span className="ml-2">
-              {format(parseISO(clase.fecha.toString()), "d 'de' MMMM 'de' yyyy", { locale: es })}
+              {clase.fecha 
+                ? format(parseISO(clase.fecha.toString()), "d 'de' MMMM 'de' yyyy", { locale: es })
+                : 'Fecha no especificada'}
             </span>
           </div>
           <div className="flex items-center text-sm text-gray-700">
