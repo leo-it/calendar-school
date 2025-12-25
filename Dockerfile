@@ -48,6 +48,12 @@ COPY --from=builder /app/.next/static ./.next/static
 # Copiar public (ya existe porque lo creamos en el builder)
 COPY --from=builder /app/public ./public
 
+# Copiar Prisma schema y binarios necesarios para db push en runtime
+COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
+COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
+
 # Copiar script de inicio
 COPY --from=builder /app/start.sh ./start.sh
 

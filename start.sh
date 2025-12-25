@@ -48,6 +48,22 @@ if [ -z "$DATABASE_URL" ] || [ -z "$DATABASE_URL_CLEAN" ]; then
   exit 1
 fi
 
-echo "✅ Variables verificadas. Iniciando aplicación..."
+echo "✅ Variables verificadas."
+
+# Verificar si las tablas existen, si no, crearlas
+echo "🔍 Verificando si las tablas de la base de datos existen..."
+if ! node -e "const { PrismaClient } = require('@prisma/client'); const prisma = new PrismaClient(); prisma.\$queryRaw\`SELECT 1 FROM \"User\" LIMIT 1\`.then(() => { console.log('Tablas existen'); process.exit(0); }).catch(() => { console.log('Tablas no existen'); process.exit(1); });" 2>/dev/null; then
+  echo "📦 Las tablas no existen. Creando tablas con Prisma..."
+  npx prisma db push --accept-data-loss --skip-generate
+  if [ $? -eq 0 ]; then
+    echo "✅ Tablas creadas exitosamente"
+  else
+    echo "⚠️  Error al crear tablas, pero continuando..."
+  fi
+else
+  echo "✅ Las tablas ya existen"
+fi
+
+echo "🚀 Iniciando aplicación..."
 exec node server.js
 
