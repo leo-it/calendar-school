@@ -83,20 +83,41 @@ Esta guía explica cómo desplegar Almanaque de Clases usando Railway.app o Rend
    - Si ya tienes un `.env` local, puedes usar el mismo `NEXTAUTH_SECRET`
    - **⚠️ En producción real, usa un secret diferente y más seguro**
    
-   **Cómo obtener DATABASE_URL:**
-   - Ve al servicio **PostgreSQL** (el que creaste primero)
-   - Ve a la pestaña **"Variables"** (como en la imagen que viste)
-   - Busca la variable `DATABASE_URL`
-   - Click en el ícono de **copiar** (📋) o en el ícono del **ojo** (👁️) para verla y copiarla
-   - Pégalo en la variable `DATABASE_URL` del servicio de la aplicación
+   **Cómo obtener DATABASE_URL (RECOMENDADO - Usa referencia):**
    
-   **Alternativa más fácil**: Railway permite referenciar variables entre servicios:
-   - En lugar de copiar, puedes usar: `${{Postgres.DATABASE_URL}}` (reemplaza "Postgres" con el nombre exacto de tu servicio PostgreSQL)
+   **⚠️ IMPORTANTE**: Usa la referencia entre servicios en lugar de copiar el valor. Esto asegura que Railway use la URL interna correcta.
+   
+   1. Ve al servicio de la aplicación Next.js (no el de PostgreSQL)
+   2. Pestaña **"Variables"**
+   3. Busca o crea la variable `DATABASE_URL`
+   4. En lugar de copiar el valor, usa la **referencia entre servicios**:
+      - Valor: `${{Postgres.DATABASE_URL}}`
+      - ⚠️ **Reemplaza "Postgres" con el nombre EXACTO de tu servicio PostgreSQL** (puede ser "Postgres", "postgres", "PostgreSQL", etc.)
+      - Para ver el nombre exacto: ve al servicio PostgreSQL y mira el nombre en la parte superior
+   
+   **Alternativa (si la referencia no funciona):**
+   - Ve al servicio **PostgreSQL** → Pestaña **"Variables"**
+   - Busca `DATABASE_URL`
+   - Click en el ícono de **copiar** (📋)
+   - Pégalo en la variable `DATABASE_URL` del servicio de la aplicación
+   - ⚠️ Asegúrate de que la URL use `postgres.railway.internal` (URL interna) y no `postgres.railway.app` (URL pública)
 
-5. **Desplegar**
+5. **Aplicar cambios y desplegar**
+   
+   **⚠️ IMPORTANTE**: Después de añadir o modificar variables de entorno, DEBES hacer redeploy:
+   
+   - Si ves "X Changes" en la parte superior, haz click en **"Apply X changes"** o presiona **"Deploy ↑+Enter"**
+   - Railway NO aplica las variables automáticamente hasta que hagas redeploy
+   - Espera 1-2 minutos a que termine el despliegue
+   - Verifica los logs para confirmar que las variables están disponibles
+   
+   **Despliegue automático:**
    - Railway desplegará automáticamente cuando hagas push a la rama principal
-   - O puedes hacerlo manualmente desde el dashboard
-   - Una vez desplegado, tu aplicación estará disponible en la URL que configuraste en `NEXTAUTH_URL`
+   - Pero si añades variables después del push, necesitas hacer redeploy manual
+   
+   **Una vez desplegado:**
+   - Tu aplicación estará disponible en la URL que configuraste en `NEXTAUTH_URL`
+   - Verifica los logs para confirmar que no hay errores de variables faltantes
 
 ### Costos
 - **Gratis**: $5 de crédito mensual (suficiente para proyectos pequeños)
@@ -212,12 +233,47 @@ Este es un error común. Sigue estos pasos para diagnosticarlo:
    - Revisa los logs más recientes para ver el error específico
    - Los errores comunes son:
 
-**2. Error: "Cannot connect to database" o "PrismaClientInitializationError"**
-   - **Causa**: `DATABASE_URL` no está configurada o es incorrecta
-   - **Solución**:
-     - Verifica que la variable `DATABASE_URL` esté en el servicio de la aplicación (no solo en PostgreSQL)
-     - Usa la referencia: `${{Postgres.DATABASE_URL}}` (reemplaza "Postgres" con el nombre exacto de tu servicio)
-     - O copia directamente el valor desde el servicio PostgreSQL → Variables → `DATABASE_URL`
+**2. Error: "Cannot connect to database" o "PrismaClientInitializationError" - "Environment variable not found: DATABASE_URL"**
+
+   **Síntomas:**
+   ```
+   error: Environment variable not found: DATABASE_URL.
+   PrismaClientInitializationError: Can't reach database server
+   ```
+   
+   **Causa**: Railway no está pasando `DATABASE_URL` al contenedor Docker en runtime.
+   
+   **Solución paso a paso:**
+   
+   1. **Verifica que el servicio PostgreSQL esté corriendo:**
+      - Ve al servicio PostgreSQL → Debe estar "Running" o "Online" (no "Sleeping")
+      - Si está dormido, haz click en "Start" o "Wake"
+   
+   2. **Configura DATABASE_URL en el servicio de la aplicación:**
+      - Ve al servicio de la aplicación (calendar-school) → Pestaña "Variables"
+      - **IMPORTANTE**: Usa el **valor directo**, NO la referencia `${{Postgres.DATABASE_URL}}`
+      - Ve al servicio PostgreSQL → Variables → Copia el valor completo de `DATABASE_URL`
+      - Pégalo en `DATABASE_URL` del servicio de la aplicación
+      - El valor debe ser algo como: `postgresql://postgres:password@postgres.railway.internal:5432/railway`
+   
+   3. **Verifica el nombre de la variable:**
+      - Debe ser exactamente `DATABASE_URL` (sin espacios, mayúsculas correctas)
+      - No debe tener caracteres especiales o espacios al inicio/final
+   
+   4. **Haz redeploy:**
+      - Después de configurar la variable, haz click en "Apply changes" o "Deploy"
+      - Railway NO aplica las variables hasta que hagas redeploy
+      - Espera 1-2 minutos a que termine el despliegue
+   
+   5. **Verifica los logs:**
+      - Después del redeploy, ve a "Deployments" → Logs
+      - Busca los logs de debug que muestran `DATABASE_URL existe: true`
+      - Si sigue mostrando `false`, Railway no está inyectando la variable correctamente
+   
+   **Si el problema persiste:**
+   - Verifica que el servicio esté configurado para usar Docker (no Buildpack)
+   - En Railway → Settings → Service Type debe ser "Docker" o "GitHub Repo"
+   - Si usas GitHub Repo, Railway debe estar construyendo desde el Dockerfile
 
 **3. Error: "Prisma Client initialization error" o "binaryTarget"**
    - **Causa**: Prisma Client no está generado correctamente para la arquitectura del servidor
