@@ -3,6 +3,12 @@ import CredentialsProvider from 'next-auth/providers/credentials'
 import { prisma } from './prisma'
 import bcrypt from 'bcryptjs'
 
+// Validar que NEXTAUTH_SECRET esté configurado en producción
+if (process.env.NODE_ENV === 'production' && !process.env.NEXTAUTH_SECRET) {
+  console.error('❌ ERROR: NEXTAUTH_SECRET no está configurado en producción!')
+  console.error('Por favor, añade la variable NEXTAUTH_SECRET en Railway.')
+}
+
 export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
   providers: [
