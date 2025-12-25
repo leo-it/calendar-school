@@ -48,8 +48,12 @@ COPY --from=builder /app/.next/static ./.next/static
 # Copiar public (ya existe porque lo creamos en el builder)
 COPY --from=builder /app/public ./public
 
+# Copiar script de inicio
+COPY --from=builder /app/start.sh ./start.sh
+
 # Cambiar ownership de los archivos
 RUN chown -R nextjs:nodejs /app
+RUN chmod +x start.sh
 
 USER nextjs
 
@@ -58,5 +62,5 @@ EXPOSE 3000
 ENV PORT 3000
 ENV HOSTNAME "0.0.0.0"
 
-CMD ["node", "server.js"]
+CMD ["./start.sh"]
 
