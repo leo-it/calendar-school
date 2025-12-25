@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { Prisma } from '@prisma/client'
 import bcrypt from 'bcryptjs'
 
 export async function POST(request: NextRequest) {
@@ -50,7 +51,7 @@ export async function POST(request: NextRequest) {
           where: { activa: true }
         })
         
-        const escuelaExistente = escuelasExistentes.find(e => 
+        const escuelaExistente = escuelasExistentes.find((e: { nombre: string }) => 
           e.nombre.toLowerCase().replace(/\s+/g, '') === nombreNormalizado
         )
 

@@ -81,7 +81,7 @@ export async function GET(request: NextRequest) {
       const diaSemana = getDay(fechaActual) // 0 = Domingo, 1 = Lunes, etc.
       
       // Buscar clases que coincidan con este día de la semana
-      const clasesDelDia = clasesRecurrentes.filter(clase => {
+      const clasesDelDia = clasesRecurrentes.filter((clase: typeof clasesRecurrentes[0]) => {
         // Verificar si hay restricciones de fecha
         if (clase.fechaInicio) {
           const fechaInicioClase = new Date(clase.fechaInicio)
@@ -98,7 +98,7 @@ export async function GET(request: NextRequest) {
       })
 
       // Generar una ocurrencia para cada clase del día
-      clasesDelDia.forEach(clase => {
+      clasesDelDia.forEach((clase: typeof clasesRecurrentes[0]) => {
         const fechaClase = new Date(fechaActual)
         fechaClase.setHours(0, 0, 0, 0)
         clasesGeneradas.push({
@@ -222,7 +222,7 @@ export async function POST(request: NextRequest) {
       // Buscar profesor por nombre (case-insensitive usando toLowerCase)
       const todosProfesores = await prisma.profesor.findMany()
       let profesor = todosProfesores.find(
-        p => p.name.toLowerCase() === nombreProfesor.toLowerCase()
+        (p: { name: string }) => p.name.toLowerCase() === nombreProfesor.toLowerCase()
       )
 
       // Si no existe, crearlo

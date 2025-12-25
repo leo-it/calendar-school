@@ -14,6 +14,7 @@ type Vista = 'dia' | 'semana'
 
 interface ClaseConProfesor extends Clase {
   profesor: Profesor
+  fecha?: Date | string // Fecha específica de la ocurrencia (añadida por la API del calendario)
 }
 
 export default function CalendarioClient({ user }: { user: { id: string; email: string; name?: string | null; role: string; esAdminEscuela?: boolean } }) {
@@ -125,7 +126,7 @@ export default function CalendarioClient({ user }: { user: { id: string; email: 
   // Obtener profesores únicos de las clases visibles (ya filtradas por escuela)
   const profesoresDeClases = Array.from(
     new Map(
-      clases.map(c => [c.profesorId, { id: c.profesorId, name: c.profesor.name }])
+      clases.map((c: ClaseConProfesor) => [c.profesorId, { id: c.profesorId, name: c.profesor.name }])
     ).values()
   )
 

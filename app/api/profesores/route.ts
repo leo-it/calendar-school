@@ -42,7 +42,7 @@ export async function GET() {
         distinct: ['profesorId'],
       })
 
-      const profesorIds = clases.map(c => c.profesorId)
+      const profesorIds = clases.map((c: { profesorId: string }) => c.profesorId)
 
       if (profesorIds.length === 0) {
         return NextResponse.json([])

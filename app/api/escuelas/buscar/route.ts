@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
     })
 
     // Buscar escuela que coincida con el nombre normalizado
-    const escuelaEncontrada = escuelas.find((escuela) => {
+    const escuelaEncontrada = escuelas.find((escuela: { nombre: string }) => {
       const nombreEscuelaNormalizado = normalizarNombre(escuela.nombre)
       return nombreEscuelaNormalizado === nombreNormalizado
     })
