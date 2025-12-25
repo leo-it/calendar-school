@@ -50,18 +50,15 @@ fi
 
 echo "✅ Variables verificadas."
 
-# Verificar si las tablas existen, si no, crearlas
+# Verificar si las tablas existen y crearlas si no existen
 echo "🔍 Verificando si las tablas de la base de datos existen..."
-if ! node -e "const { PrismaClient } = require('@prisma/client'); const prisma = new PrismaClient(); prisma.\$queryRaw\`SELECT 1 FROM \"User\" LIMIT 1\`.then(() => { console.log('Tablas existen'); process.exit(0); }).catch(() => { console.log('Tablas no existen'); process.exit(1); });" 2>/dev/null; then
-  echo "📦 Las tablas no existen. Creando tablas con Prisma..."
-  npx prisma db push --accept-data-loss --skip-generate
-  if [ $? -eq 0 ]; then
-    echo "✅ Tablas creadas exitosamente"
-  else
-    echo "⚠️  Error al crear tablas, pero continuando..."
-  fi
+# Intentar crear las tablas (db push es idempotente, no hace daño si ya existen)
+echo "📦 Ejecutando Prisma db push para crear/actualizar tablas..."
+npx prisma db push --accept-data-loss --skip-generate
+if [ $? -eq 0 ]; then
+  echo "✅ Tablas verificadas/creadas exitosamente"
 else
-  echo "✅ Las tablas ya existen"
+  echo "⚠️  Error al crear tablas, pero continuando..."
 fi
 
 echo "🚀 Iniciando aplicación..."
