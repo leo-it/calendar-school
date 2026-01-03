@@ -3,6 +3,12 @@ const nextConfig = {
   reactStrictMode: true,
   output: 'standalone', // Necesario para Docker
   
+  // Optimización para builds más rápidos
+  swcMinify: true,
+  experimental: {
+    optimizeCss: true,
+  },
+  
   // Optimizaciones de rendimiento
   compress: true,
   poweredByHeader: false,

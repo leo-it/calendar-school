@@ -6,7 +6,8 @@ WORKDIR /app
 
 # Copiar archivos de dependencias
 COPY package.json package-lock.json* ./
-RUN npm ci
+# Usar npm ci con --prefer-offline para usar cache si está disponible
+RUN npm ci --prefer-offline --no-audit
 
 # Stage 2: Builder - Construir la aplicación
 FROM node:20-alpine AS builder

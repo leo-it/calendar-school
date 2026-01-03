@@ -114,7 +114,10 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          platforms: linux/amd64,linux/arm64
+          # Solo construir para amd64 para builds más rápidos (Railway usa amd64)
+          # Si necesitas ARM64, descomenta la línea siguiente y comenta la de arriba
+          platforms: linux/amd64
+          # platforms: linux/amd64,linux/arm64  # Descomentar si necesitas ambas arquitecturas
 
   # Job 4: Despliegue (opcional - se puede activar cuando esté configurado Railway/Render)
   # deploy:
