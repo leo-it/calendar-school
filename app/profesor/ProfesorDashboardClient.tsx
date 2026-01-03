@@ -286,7 +286,7 @@ export default function ProfesorDashboardClient({ user }: { user: { id: string; 
                       value={formInfoEscuela.web}
                       onChange={(e) => setFormInfoEscuela({ ...formInfoEscuela, web: e.target.value })}
                       placeholder="Ej: https://www.escueladedanza.com"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                      className="w-full px-3 py-2 border text-gray-900 border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                     />
                   </div>
                 </div>
