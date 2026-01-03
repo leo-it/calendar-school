@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { createClaseSchema } from '@/lib/validations'
 
 export async function GET(request: NextRequest) {
   try {
@@ -152,8 +153,19 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    console.log('Body recibido:', body)
     
+    // Validar con Zod
+    const validationResult = createClaseSchema.safeParse(body)
+    if (!validationResult.success) {
+      return NextResponse.json(
+        { 
+          error: 'Datos inválidos',
+          details: validationResult.error.errors
+        },
+        { status: 400 }
+      )
+    }
+
     const {
       titulo,
       descripcion,
@@ -168,8 +180,8 @@ export async function POST(request: NextRequest) {
       profesorNombre,
       fechaInicio,
       fechaFin,
-      escuelaId, // Permitir especificar escuelaId (solo para ADMIN)
-    } = body
+      escuelaId,
+    } = validationResult.data
 
     // Determinar la escuelaId a usar
     let finalEscuelaId: string
@@ -198,24 +210,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Validar y convertir diaSemana
-    const diaSemanaNum = typeof diaSemana === 'string' ? parseInt(diaSemana, 10) : diaSemana
-    console.log('diaSemana recibido:', diaSemana, 'convertido a:', diaSemanaNum)
-    
-    if (isNaN(diaSemanaNum) || diaSemanaNum < 0 || diaSemanaNum > 6) {
-      return NextResponse.json(
-        { error: `Día de la semana inválido: ${diaSemana}. Debe ser un número entre 0 y 6` },
-        { status: 400 }
-      )
-    }
-
-    // Validar campos requeridos (estilo es opcional, se usará el título si está vacío)
-    if (!titulo || !horaInicio || !horaFin || !nivel) {
-      return NextResponse.json(
-        { error: 'Faltan campos requeridos: título, hora de inicio, hora de fin o nivel' },
-        { status: 400 }
-      )
-    }
+    // diaSemana ya está validado y convertido por Zod
+    const diaSemanaNum = diaSemana
 
     // Obtener o crear el profesor
     let profesorFinalId: string
@@ -258,11 +254,11 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // El lugar será el nombre de la escuela
-    const lugarFinal = escuela.nombre
-
     // Si el estilo está vacío, usar el título
     const estiloFinal = (estilo && estilo.trim() !== '') ? estilo.trim() : titulo.trim()
+    
+    // Usar el lugar proporcionado o el nombre de la escuela como fallback
+    const lugarFinal = lugar || escuela.nombre
 
     const clase = await prisma.clase.create({
       data: {

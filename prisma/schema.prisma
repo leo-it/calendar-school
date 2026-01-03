@@ -51,6 +51,10 @@ model User {
   clasesSubscritas    ClaseSubscription[]
   notificaciones      Notificacion[]
   invitacionesCreadas InvitacionProfesor[] @relation("CreadorInvitacion")
+
+  // Índices para optimizar queries frecuentes
+  @@index([escuelaId, role])
+  @@index([email])
 }
 
 model Profesor {
@@ -89,6 +93,11 @@ model Clase {
   escuela    Escuela  @relation(fields: [escuelaId], references: [id])
 
   subscriptions ClaseSubscription[]
+
+  // Índices para optimizar queries frecuentes
+  @@index([escuelaId, activa])
+  @@index([diaSemana, activa])
+  @@index([profesorId])
 }
 
 model ClaseSubscription {

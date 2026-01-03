@@ -20,6 +20,20 @@ Sistema de gestión de clases de danza con calendario interactivo, filtros avanz
 - **Tailwind CSS** (Estilos)
 - **PostgreSQL** (Base de datos)
 - **Docker** (Contenerización)
+- **PWA** (Progressive Web App)
+- **Zod** (Validación de esquemas)
+
+## 🚀 Características de Seguridad y Optimización
+
+- ✅ **Validación estricta** con Zod schemas
+- ✅ **Headers de seguridad** (XSS, CSRF, Clickjacking)
+- ✅ **Sanitización de inputs** para prevenir inyecciones
+- ✅ **Índices de base de datos** optimizados
+- ✅ **PWA instalable** desde el navegador
+- ✅ **Service Worker** para funcionamiento offline
+- ✅ **Rate limiting** básico implementado
+
+Para más detalles, ver [README_SEGURIDAD_OPTIMIZACION.md](./README_SEGURIDAD_OPTIMIZACION.md)
 
 ## Instalación (Desarrollo Local)
 
@@ -182,7 +196,10 @@ almanaque/
 - [ ] Dashboard para profesores
 - [ ] Sistema de preferencias de notificación por usuario
 - [x] Agregar clases individuales a Google Calendar
+- [x] Implementación de PWA (Progressive Web App)
+- [x] Optimizaciones de seguridad y rendimiento
 - [ ] Sistema de membresía y control de inscripciones
+- [ ] Internacionalización (i18n) para múltiples idiomas
 
 ## 💳 Sistema de Membresía (Planificado)
 
@@ -326,6 +343,137 @@ Para más información sobre la preparación para microfrontends, consulta:
 - ✅ **Despliegue independiente** de módulos
 - ✅ **Equipos autónomos** trabajando en paralelo
 - ✅ **Escalabilidad** horizontal por módulo
+
+## 🌍 Internacionalización (i18n) - Planificado
+
+### Objetivo
+
+Implementar soporte para múltiples idiomas, permitiendo que los usuarios elijan su idioma preferido y que la aplicación se adapte automáticamente.
+
+### Requisitos
+
+1. **Soporte multiidioma**: La aplicación debe poder mostrar contenido en diferentes idiomas
+2. **Selector de idioma**: Los usuarios deben poder cambiar el idioma desde la interfaz
+3. **Persistencia de preferencia**: El idioma seleccionado debe guardarse en las preferencias del usuario
+4. **Traducción completa**: Todos los textos de la interfaz deben ser traducibles
+5. **Formato de fechas y números**: Adaptar formatos según el idioma seleccionado
+
+### Idiomas Propuestos
+
+- 🇪🇸 **Español** (es) - Idioma por defecto
+- 🇺🇸 **Inglés** (en)
+- 🇵🇹 **Portugués** (pt) - Para expansión en Brasil/Portugal
+- 🇫🇷 **Francés** (fr) - Para expansión en Francia/Canadá
+
+### Estrategia Propuesta
+
+#### Tecnología Recomendada
+
+**next-intl** o **next-i18next**:
+- Integración nativa con Next.js App Router
+- Soporte para Server Components
+- Type-safe translations
+- Lazy loading de traducciones
+- Formato de fechas y números automático
+
+#### Estructura Propuesta
+
+```
+almanaque/
+├── messages/              # Archivos de traducción
+│   ├── es.json           # Español
+│   ├── en.json           # Inglés
+│   ├── pt.json           # Portugués
+│   └── fr.json           # Francés
+├── lib/
+│   └── i18n.ts           # Configuración de i18n
+└── middleware.ts          # Middleware para detectar idioma
+```
+
+#### Ejemplo de Implementación
+
+```typescript
+// messages/es.json
+{
+  "common": {
+    "welcome": "Bienvenido",
+    "login": "Iniciar sesión",
+    "logout": "Cerrar sesión"
+  },
+  "calendar": {
+    "title": "Calendario de Clases",
+    "filter": "Filtrar",
+    "subscribe": "Inscribirse"
+  }
+}
+
+// messages/en.json
+{
+  "common": {
+    "welcome": "Welcome",
+    "login": "Log in",
+    "logout": "Log out"
+  },
+  "calendar": {
+    "title": "Class Calendar",
+    "filter": "Filter",
+    "subscribe": "Subscribe"
+  }
+}
+```
+
+#### Detección de Idioma
+
+1. **Prioridad de detección**:
+   - Preferencia guardada del usuario (en base de datos)
+   - Header `Accept-Language` del navegador
+   - Idioma por defecto (español)
+
+2. **Almacenamiento**:
+   - Guardar preferencia en el modelo `User` de Prisma
+   - Cookie para usuarios no autenticados
+   - Persistir en localStorage del navegador
+
+#### Consideraciones de Implementación
+
+1. **Contenido dinámico**:
+   - Los nombres de profesores, escuelas y clases no se traducen (son datos del usuario)
+   - Solo se traducen textos de la interfaz (botones, labels, mensajes)
+
+2. **Formato de fechas**:
+   - Usar `date-fns` con locales específicos
+   - Adaptar formato según idioma (DD/MM/YYYY vs MM/DD/YYYY)
+
+3. **Formato de números**:
+   - Separadores decimales según idioma
+   - Formato de teléfonos según país
+
+4. **RTL (Right-to-Left)**:
+   - Considerar soporte para idiomas RTL en el futuro (árabe, hebreo)
+
+5. **SEO**:
+   - URLs con prefijo de idioma: `/es/calendario`, `/en/calendar`
+   - Meta tags en el idioma correcto
+   - Sitemap multiidioma
+
+### Próximos Pasos
+
+- [ ] Investigar y elegir librería de i18n (next-intl recomendado)
+- [ ] Crear estructura de archivos de traducción
+- [ ] Agregar campo `locale` al modelo `User` en Prisma
+- [ ] Implementar middleware de detección de idioma
+- [ ] Crear selector de idioma en la interfaz
+- [ ] Traducir todos los textos de la aplicación
+- [ ] Configurar formato de fechas y números por idioma
+- [ ] Agregar tests para verificar traducciones
+- [ ] Documentar proceso para agregar nuevos idiomas
+
+### Beneficios
+
+- 🌍 **Alcance global**: Permite expandir a mercados internacionales
+- 👥 **Mejor UX**: Los usuarios pueden usar la app en su idioma nativo
+- 📈 **Escalabilidad**: Fácil agregar nuevos idiomas sin cambiar código
+- 🔍 **SEO mejorado**: Contenido en múltiples idiomas mejora el SEO
 
 ### Casos de Uso Futuros con Microfrontends
 
