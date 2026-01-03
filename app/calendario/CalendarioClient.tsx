@@ -8,7 +8,7 @@ import { es } from 'date-fns/locale/es'
 import Filtros from '@/components/Filtros'
 import VistaCalendario from '@/components/VistaCalendario'
 import { Clase, Profesor } from '@prisma/client'
-import { Nivel, Estilo } from '@/types/enums'
+import { Nivel } from '@/types/enums'
 
 type Vista = 'dia' | 'semana'
 

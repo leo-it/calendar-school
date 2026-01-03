@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { Profesor } from '@prisma/client'
 import { Nivel, Estilo } from '@/types/enums'
+import TimePicker from '@/components/TimePicker'
 
 export default function EditarClaseClient({ 
   claseId, 
@@ -277,31 +278,23 @@ export default function EditarClaseClient({
 
               {/* Hora Inicio */}
               <div>
-                <label htmlFor="horaInicio" className="block text-sm font-medium text-gray-700 mb-1">
-                  Hora de Inicio *
-                </label>
-                <input
+                <TimePicker
                   id="horaInicio"
-                  type="time"
-                  required
+                  label="Hora de Inicio"
                   value={formData.horaInicio}
-                  onChange={(e) => setFormData({ ...formData, horaInicio: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900"
+                  onChange={(value) => setFormData({ ...formData, horaInicio: value })}
+                  required
                 />
               </div>
 
               {/* Hora Fin */}
               <div>
-                <label htmlFor="horaFin" className="block text-sm font-medium text-gray-700 mb-1">
-                  Hora de Fin *
-                </label>
-                <input
+                <TimePicker
                   id="horaFin"
-                  type="time"
-                  required
+                  label="Hora de Fin"
                   value={formData.horaFin}
-                  onChange={(e) => setFormData({ ...formData, horaFin: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900"
+                  onChange={(value) => setFormData({ ...formData, horaFin: value })}
+                  required
                 />
               </div>
 

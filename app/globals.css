@@ -68,6 +68,37 @@ input[type="date"]::-webkit-calendar-picker-indicator,
 input[type="time"]::-webkit-calendar-picker-indicator {
   filter: invert(0);
   opacity: 1;
+  cursor: pointer;
+}
+
+/* Fix específico para Safari - inputs de tipo time */
+input[type="time"].safari-time-input {
+  -webkit-appearance: textfield;
+  appearance: textfield;
+}
+
+input[type="time"].safari-time-input::-webkit-inner-spin-button,
+input[type="time"].safari-time-input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  appearance: none;
+  margin: 0;
+}
+
+/* Asegurar que el indicador de tiempo sea clickeable en Safari */
+input[type="time"].safari-time-input::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 1;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  margin-left: 8px;
+}
+
+/* Para Safari en iOS/macOS - asegurar que el input sea interactivo */
+@supports (-webkit-touch-callout: none) {
+  input[type="time"].safari-time-input {
+    padding-right: 40px;
+  }
 }
 
 /* Asegurar que el texto dentro de los selects sea visible */
