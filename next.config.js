@@ -5,9 +5,6 @@ const nextConfig = {
   
   // Optimización para builds más rápidos
   swcMinify: true,
-  experimental: {
-    optimizeCss: true,
-  },
   
   // Optimizaciones de rendimiento
   compress: true,

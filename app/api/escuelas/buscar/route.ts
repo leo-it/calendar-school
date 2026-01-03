@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
+// Forzar que esta ruta sea dinámica (no pre-renderizada)
+export const dynamic = 'force-dynamic'
+
 // Función para normalizar nombres (convertir a minúsculas, sin espacios, sin acentos)
 function normalizarNombre(nombre: string): string {
   return nombre

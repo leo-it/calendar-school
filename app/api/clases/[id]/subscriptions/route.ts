@@ -3,6 +3,9 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
+// Forzar que esta ruta sea dinámica (no pre-renderizada)
+export const dynamic = 'force-dynamic'
+
 // GET - Obtener todos los suscriptores de una clase
 export async function GET(
   request: NextRequest,

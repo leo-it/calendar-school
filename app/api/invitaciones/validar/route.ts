@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
+// Forzar que esta ruta sea dinámica (no pre-renderizada)
+export const dynamic = 'force-dynamic'
+
 // GET - Validar un código de invitación
 export async function GET(request: NextRequest) {
   try {

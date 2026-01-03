@@ -5,6 +5,9 @@ import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
 import crypto from 'crypto'
 
+// Forzar que esta ruta sea dinámica (no pre-renderizada)
+export const dynamic = 'force-dynamic'
+
 // POST - Crear un estudiante (solo para PROFESOR o ADMIN)
 export async function POST(request: NextRequest) {
   try {

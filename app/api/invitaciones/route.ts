@@ -4,6 +4,9 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import crypto from 'crypto'
 
+// Forzar que esta ruta sea dinámica (no pre-renderizada)
+export const dynamic = 'force-dynamic'
+
 // GET - Obtener todas las invitaciones (ADMIN o PROFESOR admin de su escuela)
 export async function GET(request: NextRequest) {
   try {
