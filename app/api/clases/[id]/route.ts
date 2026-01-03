@@ -126,7 +126,7 @@ export async function PUT(
       nivel,
       estilo: estiloFinal,
       lugar,
-      capacidad: parseInt(capacidad),
+      capacidad: typeof capacidad === 'number' ? capacidad : (capacidad ? parseInt(String(capacidad)) : 20),
       profesorId,
       fechaInicio: fechaInicio ? new Date(fechaInicio) : null,
       fechaFin: fechaFin ? new Date(fechaFin) : null,

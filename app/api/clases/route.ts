@@ -270,7 +270,7 @@ export async function POST(request: NextRequest) {
         nivel,
         estilo: estiloFinal,
         lugar: lugarFinal,
-        capacidad: parseInt(capacidad) || 20,
+        capacidad: capacidad || 20,
         profesorId: profesorFinalId,
         escuelaId: finalEscuelaId,
         fechaInicio: fechaInicio ? new Date(fechaInicio) : null,

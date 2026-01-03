@@ -80,10 +80,10 @@ export function checkRateLimit(identifier: string, maxRequests: number = 10, win
 // Limpiar entradas expiradas cada minuto
 setInterval(() => {
   const now = Date.now()
-  for (const [key, value] of rateLimitMap.entries()) {
+  Array.from(rateLimitMap.entries()).forEach(([key, value]) => {
     if (now > value.resetTime) {
       rateLimitMap.delete(key)
     }
-  }
+  })
 }, 60000)
 
