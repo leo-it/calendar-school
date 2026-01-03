@@ -7,7 +7,7 @@ export default function ServiceWorkerRegistration() {
     if (
       typeof window !== 'undefined' &&
       'serviceWorker' in navigator &&
-      process.env.NODE_ENV === 'production'
+      window.location.protocol === 'https:'
     ) {
       navigator.serviceWorker
         .register('/sw.js')

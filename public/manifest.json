@@ -3,6 +3,7 @@
   "short_name": "Almanaque",
   "description": "Sistema de gestión de clases con calendario interactivo",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#6366f1",

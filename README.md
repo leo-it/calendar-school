@@ -35,6 +35,57 @@ Sistema de gestión de clases de danza con calendario interactivo, filtros avanz
 
 Para más detalles, ver [README_SEGURIDAD_OPTIMIZACION.md](./README_SEGURIDAD_OPTIMIZACION.md)
 
+## 📱 Instalar la App en tu Celular (PWA)
+
+La aplicación es una **Progressive Web App (PWA)** que puedes instalar directamente desde el navegador, sin necesidad de pasar por las tiendas de aplicaciones.
+
+### 📲 Instalación en Android (Chrome/Edge)
+
+1. **Abre la aplicación** en Chrome o Edge desde tu celular
+   - Ve a la URL de producción (ej: `https://tu-dominio.com`)
+2. **Espera el banner de instalación**
+   - Deberías ver: "Agregar Almanaque a la pantalla de inicio"
+   - Si no aparece, ve al menú (⋮) → **"Agregar a la pantalla de inicio"** o **"Instalar app"**
+3. **Toca "Agregar" o "Instalar"**
+4. **¡Listo!** La app aparecerá como un ícono en tu pantalla de inicio
+5. **Al abrirla**, funcionará como una app nativa (sin barra del navegador)
+
+### 🍎 Instalación en iPhone/iPad (Safari)
+
+1. **Abre la aplicación** en Safari desde tu iPhone/iPad
+   - Ve a la URL de producción (ej: `https://tu-dominio.com`)
+2. **Toca el botón de compartir** (□↑) en la parte inferior
+3. **Selecciona "Agregar a pantalla de inicio"**
+4. **Personaliza el nombre** (opcional) y toca "Agregar"
+5. **¡Listo!** La app aparecerá como un ícono en tu pantalla de inicio
+6. **Al abrirla**, funcionará como una app nativa (sin barra del navegador)
+
+### ✅ Verificar que Funciona
+
+Una vez instalada:
+- ✅ La app aparece como ícono independiente
+- ✅ Al abrirla, no se ve la barra de direcciones del navegador
+- ✅ Funciona en modo "standalone" (como app nativa)
+- ✅ Puede funcionar offline básico (gracias al Service Worker)
+
+### ⚠️ Requisitos
+
+- **HTTPS obligatorio**: La PWA solo funciona en sitios con HTTPS (requerido para producción)
+- **Navegador compatible**: Chrome/Edge en Android, Safari en iOS
+- **Service Worker activo**: Se registra automáticamente en producción
+
+### 🔧 Troubleshooting
+
+**Si no aparece el banner de instalación**:
+- Verifica que estás usando HTTPS (no HTTP)
+- Asegúrate de estar en producción (no en localhost)
+- Intenta desde el menú del navegador manualmente
+
+**Si la app no se instala**:
+- Verifica que `/manifest.json` sea accesible
+- Revisa la consola del navegador por errores
+- Asegúrate de que el Service Worker esté registrado (DevTools → Application → Service Workers)
+
 ## Instalación (Desarrollo Local)
 
 **Nota**: Para desarrollo local, se recomienda usar Docker (ver sección siguiente). Esta instalación requiere PostgreSQL corriendo localmente.
