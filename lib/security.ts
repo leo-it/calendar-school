@@ -13,10 +13,10 @@ export function getSecurityHeaders() {
     'Content-Security-Policy': [
       "default-src 'self'",
       "script-src 'self' 'unsafe-eval' 'unsafe-inline'", // Next.js necesita unsafe-eval en dev
-      "style-src 'self' 'unsafe-inline'", // Tailwind necesita unsafe-inline
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com", // Permitir Google Fonts
       "img-src 'self' data: https:",
-      "font-src 'self' data:",
-      "connect-src 'self'",
+      "font-src 'self' data: https://fonts.gstatic.com", // Permitir Google Fonts
+      "connect-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com", // Permitir Google Fonts
       "frame-ancestors 'none'",
     ].join('; '),
   }

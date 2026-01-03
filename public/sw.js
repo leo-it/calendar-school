@@ -51,24 +51,30 @@ self.addEventListener('fetch', (event) => {
     return
   }
 
+  // No cachear recursos externos (Google Fonts, etc.) que pueden violar CSP
+  if (event.request.url.startsWith('http') && !event.request.url.startsWith(self.location.origin)) {
+    return
+  }
+
   event.respondWith(
     fetch(event.request)
       .then((response) => {
-        // Clonar la respuesta
-        const responseToCache = response.clone()
-
-        // Cachear solo si la respuesta es válida
-        if (response.status === 200) {
+        // Solo cachear respuestas válidas del mismo origen
+        if (response.status === 200 && response.type === 'basic') {
+          const responseToCache = response.clone()
           caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, responseToCache)
+            cache.put(event.request, responseToCache).catch(() => {
+              // Ignorar errores de cache (puede fallar por CSP)
+            })
           })
         }
-
         return response
       })
       .catch(() => {
         // Si falla la red, intentar desde el cache
-        return caches.match(event.request)
+        return caches.match(event.request).then((cachedResponse) => {
+          return cachedResponse || new Response('Offline', { status: 503 })
+        })
       })
   )
 })
