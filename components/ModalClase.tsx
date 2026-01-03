@@ -9,6 +9,17 @@ import { generarUrlGoogleCalendar } from '@/lib/google-calendar'
 
 interface ClaseConProfesor extends Clase {
   profesor: Profesor
+  escuela?: {
+    id: string
+    nombre: string
+    direccion?: string | null
+    telefono?: string | null
+    email?: string | null
+    instagram?: string | null
+    facebook?: string | null
+    whatsapp?: string | null
+    web?: string | null
+  }
   fecha?: Date | string // Fecha específica de la ocurrencia (añadida por la API del calendario)
 }
 

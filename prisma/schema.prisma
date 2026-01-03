@@ -12,14 +12,18 @@ datasource db {
 }
 
 model Escuela {
-  id        String   @id @default(cuid())
-  nombre    String
-  direccion String?
-  telefono  String?
-  email     String?
-  activa    Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id              String   @id @default(cuid())
+  nombre          String
+  direccion       String?
+  telefono        String?
+  email           String?
+  instagram       String?
+  facebook        String?
+  whatsapp        String?
+  web             String?
+  activa          Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   // Relaciones
   usuarios     User[]

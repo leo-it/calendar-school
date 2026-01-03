@@ -33,10 +33,74 @@ export default function ProfesorDashboardClient({ user }: { user: { id: string; 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [claseSeleccionada, setClaseSeleccionada] = useState<Clase | null>(null)
+  const [mostrarInfoContacto, setMostrarInfoContacto] = useState(false)
+  const [infoEscuela, setInfoEscuela] = useState<any>(null)
+  const [editandoInfo, setEditandoInfo] = useState(false)
+  const [guardandoInfo, setGuardandoInfo] = useState(false)
+  const [formInfoEscuela, setFormInfoEscuela] = useState({
+    direccion: '',
+    telefono: '',
+    email: '',
+    instagram: '',
+    facebook: '',
+    whatsapp: '',
+    web: '',
+  })
 
   useEffect(() => {
     cargarClases()
+    cargarInfoEscuela()
   }, [])
+
+  const cargarInfoEscuela = async () => {
+    try {
+      const response = await fetch('/api/escuelas')
+      if (response.ok) {
+        const escuelas = await response.json()
+        if (escuelas.length > 0) {
+          const escuela = escuelas[0] // El profesor solo ve su escuela
+          setInfoEscuela(escuela)
+          setFormInfoEscuela({
+            direccion: escuela.direccion || '',
+            telefono: escuela.telefono || '',
+            email: escuela.email || '',
+            instagram: escuela.instagram || '',
+            facebook: escuela.facebook || '',
+            whatsapp: escuela.whatsapp || '',
+            web: escuela.web || '',
+          })
+        }
+      }
+    } catch (err) {
+      console.error('Error al cargar información de escuela:', err)
+    }
+  }
+
+  const handleGuardarInfoEscuela = async () => {
+    if (!infoEscuela) return
+    
+    setGuardandoInfo(true)
+    try {
+      const response = await fetch(`/api/escuelas/${infoEscuela.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formInfoEscuela),
+      })
+
+      if (response.ok) {
+        await cargarInfoEscuela()
+        setEditandoInfo(false)
+        alert('Información de contacto actualizada correctamente')
+      } else {
+        const data = await response.json()
+        alert(data.error || 'Error al actualizar información')
+      }
+    } catch (err) {
+      alert('Error al guardar información')
+    } finally {
+      setGuardandoInfo(false)
+    }
+  }
 
   const cargarClases = async () => {
     setLoading(true)
@@ -111,6 +175,184 @@ export default function ProfesorDashboardClient({ user }: { user: { id: string; 
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Información de Contacto de la Escuela */}
+        {infoEscuela && (
+          <div className="bg-white shadow rounded-lg p-6 mb-6">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl text-gray-900 font-semibold">Información de Contacto</h2>
+              <button
+                onClick={() => {
+                  setEditandoInfo(!editandoInfo)
+                  if (editandoInfo) {
+                    // Resetear formulario si cancela
+                    setFormInfoEscuela({
+                      direccion: infoEscuela.direccion || '',
+                      telefono: infoEscuela.telefono || '',
+                      email: infoEscuela.email || '',
+                      instagram: infoEscuela.instagram || '',
+                      facebook: infoEscuela.facebook || '',
+                      whatsapp: infoEscuela.whatsapp || '',
+                      web: infoEscuela.web || '',
+                    })
+                  }
+                }}
+                className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 text-sm"
+              >
+                {editandoInfo ? 'Cancelar' : 'Editar'}
+              </button>
+            </div>
+
+            {editandoInfo ? (
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Dirección
+                    </label>
+                    <input
+                      type="text"
+                      value={formInfoEscuela.direccion}
+                      onChange={(e) => setFormInfoEscuela({ ...formInfoEscuela, direccion: e.target.value })}
+                      placeholder="Ej: Calle Principal 123"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Teléfono
+                    </label>
+                    <input
+                      type="text"
+                      value={formInfoEscuela.telefono}
+                      onChange={(e) => setFormInfoEscuela({ ...formInfoEscuela, telefono: e.target.value })}
+                      placeholder="Ej: +54 11 1234-5678"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Email
+                    </label>
+                    <input
+                      type="email"
+                      value={formInfoEscuela.email}
+                      onChange={(e) => setFormInfoEscuela({ ...formInfoEscuela, email: e.target.value })}
+                      placeholder="Ej: contacto@escuela.com"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      WhatsApp
+                    </label>
+                    <input
+                      type="text"
+                      value={formInfoEscuela.whatsapp}
+                      onChange={(e) => setFormInfoEscuela({ ...formInfoEscuela, whatsapp: e.target.value })}
+                      placeholder="Ej: +54 11 1234-5678"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Instagram
+                    </label>
+                    <input
+                      type="text"
+                      value={formInfoEscuela.instagram}
+                      onChange={(e) => setFormInfoEscuela({ ...formInfoEscuela, instagram: e.target.value })}
+                      placeholder="Ej: @escueladedanza"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Facebook
+                    </label>
+                    <input
+                      type="text"
+                      value={formInfoEscuela.facebook}
+                      onChange={(e) => setFormInfoEscuela({ ...formInfoEscuela, facebook: e.target.value })}
+                      placeholder="Ej: /escueladedanza"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Sitio Web
+                    </label>
+                    <input
+                      type="url"
+                      value={formInfoEscuela.web}
+                      onChange={(e) => setFormInfoEscuela({ ...formInfoEscuela, web: e.target.value })}
+                      placeholder="Ej: https://www.escueladedanza.com"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2">
+                  <button
+                    onClick={handleGuardarInfoEscuela}
+                    disabled={guardandoInfo}
+                    className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50"
+                  >
+                    {guardandoInfo ? 'Guardando...' : 'Guardar'}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                {infoEscuela.direccion && (
+                  <div>
+                    <span className="font-medium text-gray-700">Dirección:</span>
+                    <p className="text-gray-600">{infoEscuela.direccion}</p>
+                  </div>
+                )}
+                {infoEscuela.telefono && (
+                  <div>
+                    <span className="font-medium text-gray-700">Teléfono:</span>
+                    <p className="text-gray-600">{infoEscuela.telefono}</p>
+                  </div>
+                )}
+                {infoEscuela.email && (
+                  <div>
+                    <span className="font-medium text-gray-700">Email:</span>
+                    <p className="text-gray-600">{infoEscuela.email}</p>
+                  </div>
+                )}
+                {infoEscuela.whatsapp && (
+                  <div>
+                    <span className="font-medium text-gray-700">WhatsApp:</span>
+                    <p className="text-gray-600">{infoEscuela.whatsapp}</p>
+                  </div>
+                )}
+                {infoEscuela.instagram && (
+                  <div>
+                    <span className="font-medium text-gray-700">Instagram:</span>
+                    <p className="text-gray-600">{infoEscuela.instagram}</p>
+                  </div>
+                )}
+                {infoEscuela.facebook && (
+                  <div>
+                    <span className="font-medium text-gray-700">Facebook:</span>
+                    <p className="text-gray-600">{infoEscuela.facebook}</p>
+                  </div>
+                )}
+                {infoEscuela.web && (
+                  <div>
+                    <span className="font-medium text-gray-700">Sitio Web:</span>
+                    <p className="text-gray-600">{infoEscuela.web}</p>
+                  </div>
+                )}
+                {!infoEscuela.direccion && !infoEscuela.telefono && !infoEscuela.email && 
+                 !infoEscuela.whatsapp && !infoEscuela.instagram && !infoEscuela.facebook && !infoEscuela.web && (
+                  <p className="text-gray-500 text-sm">No hay información de contacto configurada. Haz clic en "Editar" para agregar.</p>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
         <h2 className="text-xl font-semibold mb-4">Mis Clases</h2>
 
         {error && (
