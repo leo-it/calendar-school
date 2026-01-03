@@ -10,6 +10,7 @@
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:studio": "prisma studio",
+    "db:migrate-dni": "tsx scripts/migrate-dni-apellido.ts",
     "seed": "tsx scripts/seed.ts"
   },
   "dependencies": {

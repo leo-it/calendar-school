@@ -19,23 +19,50 @@ export default function TimePicker({
   className = '',
   label,
 }: TimePickerProps) {
-  const [hour, setHour] = useState('09')
-  const [minute, setMinute] = useState('00')
+  // Inicializar con valores por defecto o parsear el valor recibido
+  const getInitialHour = () => {
+    if (value && value.includes(':')) {
+      const [h] = value.split(':')
+      return h ? h.padStart(2, '0') : '09'
+    }
+    return '09'
+  }
 
-  // Parsear el valor inicial
+  const getInitialMinute = () => {
+    if (value && value.includes(':')) {
+      const [, m] = value.split(':')
+      return m ? m.padStart(2, '0') : '00'
+    }
+    return '00'
+  }
+
+  const [hour, setHour] = useState(getInitialHour())
+  const [minute, setMinute] = useState(getInitialMinute())
+
+  // Parsear el valor inicial y asegurar que siempre hay un valor válido
   useEffect(() => {
     if (value && value.includes(':')) {
       const [h, m] = value.split(':')
       if (h !== undefined && m !== undefined) {
-        setHour(h.padStart(2, '0'))
-        setMinute(m.padStart(2, '0'))
+        const hFormatted = h.padStart(2, '0')
+        const mFormatted = m.padStart(2, '0')
+        if (hour !== hFormatted || minute !== mFormatted) {
+          setHour(hFormatted)
+          setMinute(mFormatted)
+        }
       }
-    } else if (!value) {
+    } else if (!value || value === '') {
       // Si no hay valor, usar valores por defecto
-      setHour('09')
-      setMinute('00')
+      const defaultHour = '09'
+      const defaultMinute = '00'
+      if (hour !== defaultHour || minute !== defaultMinute) {
+        setHour(defaultHour)
+        setMinute(defaultMinute)
+        // Solo notificar si realmente no había valor
+        onChange(`${defaultHour}:${defaultMinute}`)
+      }
     }
-  }, [value])
+  }, [value]) // Removido onChange de las dependencias para evitar loops
 
   // Generar opciones para horas (00-23)
   const hours = Array.from({ length: 24 }, (_, i) => 
@@ -97,13 +124,13 @@ export default function TimePicker({
           ))}
         </select>
       </div>
-      {/* Input oculto para mantener compatibilidad con formularios */}
+      {/* Input oculto para mantener compatibilidad con formularios - siempre tiene valor válido */}
       <input
         type="hidden"
         id={id}
         name={id}
         value={`${hour}:${minute}`}
-        required={required}
+        readOnly
       />
     </div>
   )

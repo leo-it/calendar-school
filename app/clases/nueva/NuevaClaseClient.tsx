@@ -17,8 +17,8 @@ export default function NuevaClaseClient({ user }: { user: { id: string; email: 
     titulo: '',
     descripcion: '',
     diaSemana: '1', // 1 = Lunes por defecto
-    horaInicio: '',
-    horaFin: '',
+    horaInicio: '09:00', // Valor por defecto
+    horaFin: '10:00', // Valor por defecto
     nivel: 'PRINCIPIANTE' as Nivel,
     estilo: '',
     capacidad: 20,
@@ -58,8 +58,17 @@ export default function NuevaClaseClient({ user }: { user: { id: string; email: 
         return
       }
 
-      if (!formData.estilo) {
-        setError('El estilo es requerido')
+      // El estilo es opcional, si está vacío se usará el título
+
+      // Validar que las horas estén completas (formato HH:MM)
+      if (!formData.horaInicio || !formData.horaInicio.match(/^\d{2}:\d{2}$/)) {
+        setError('Debes seleccionar una hora de inicio válida')
+        setLoading(false)
+        return
+      }
+
+      if (!formData.horaFin || !formData.horaFin.match(/^\d{2}:\d{2}$/)) {
+        setError('Debes seleccionar una hora de fin válida')
         setLoading(false)
         return
       }
@@ -234,17 +243,19 @@ export default function NuevaClaseClient({ user }: { user: { id: string; email: 
               {/* Estilo */}
               <div>
                 <label htmlFor="estilo" className="block text-sm font-medium text-gray-700 mb-1">
-                  Estilo *
+                  Estilo (opcional)
                 </label>
                 <input
                   id="estilo"
                   type="text"
-                  required
                   value={formData.estilo}
                   onChange={(e) => setFormData({ ...formData, estilo: e.target.value })}
-                  placeholder="Ej: Contemporáneo, Jazz, Ballet, Hip Hop..."
+                  placeholder="Ej: Contemporáneo, Jazz, Ballet, Hip Hop... (si no completas, se usará el título)"
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900"
                 />
+                <p className="mt-1 text-xs text-gray-500">
+                  Si no completas este campo, se usará el título de la clase como estilo
+                </p>
               </div>
 
               {/* Profesor */}

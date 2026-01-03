@@ -7,6 +7,7 @@ import { es } from 'date-fns/locale/es'
 import { Clase, Profesor } from '@prisma/client'
 import { Nivel, Estilo } from '@/types/enums'
 import ModalClase from './ModalClase'
+import { generarUrlGoogleCalendar } from '@/lib/google-calendar'
 
 interface ClaseConProfesor extends Clase {
   profesor: Profesor
@@ -269,24 +270,39 @@ export default function TarjetaClase({
             </>
           )}
           {clase.activa && !puedeEditar && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation()
-                handleSubscribe()
-              }}
-              disabled={subscribiendo || estaSubscrito}
-              className={`w-full py-2 px-4 rounded-lg font-medium transition-colors ${
-                estaSubscrito
-                  ? 'bg-green-100 text-green-800 cursor-not-allowed'
-                  : 'bg-primary-600 text-white hover:bg-primary-700'
-              } disabled:opacity-50`}
-            >
-              {subscribiendo
-                ? 'Subscribiendo...'
-                : estaSubscrito
-                ? '✓ Subscrito'
-                : 'Subscribirse a esta clase'}
-            </button>
+            <>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handleSubscribe()
+                }}
+                disabled={subscribiendo || estaSubscrito}
+                className={`flex-1 py-2 px-4 rounded-lg font-medium transition-colors ${
+                  estaSubscrito
+                    ? 'bg-green-100 text-green-800 cursor-not-allowed'
+                    : 'bg-primary-600 text-white hover:bg-primary-700'
+                } disabled:opacity-50`}
+              >
+                {subscribiendo
+                  ? 'Subscribiendo...'
+                  : estaSubscrito
+                  ? '✓ Subscrito'
+                  : 'Subscribirse'}
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  const url = generarUrlGoogleCalendar(clase)
+                  window.open(url, '_blank')
+                }}
+                className="py-2 px-3 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                title="Agregar a Google Calendar"
+              >
+                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zm0-12H5V6h14v2z"/>
+                </svg>
+              </button>
+            </>
           )}
         </div>
       </div>

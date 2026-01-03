@@ -6,7 +6,7 @@ import bcrypt from 'bcryptjs'
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { email, password, name, role, phone, escuelaId, codigoInvitacion, nombreEscuela } = body
+    const { email, password, name, apellido, dni, role, phone, escuelaId, codigoInvitacion, nombreEscuela } = body
 
     // Validaciones
     if (!email || !password) {
@@ -144,6 +144,8 @@ export async function POST(request: NextRequest) {
         email,
         password: hashedPassword,
         name: name || null,
+        apellido: apellido || null,
+        dni: dni || null,
         role: role || 'ESTUDIANTE',
         phone: phone || null,
         esAdminEscuela: esAdminEscuela,
@@ -180,6 +182,7 @@ export async function POST(request: NextRequest) {
               name: name || email,
               email: email,
               phone: phone || null,
+              dni: dni || null,
             }
           })
         }

@@ -113,6 +113,9 @@ export async function PUT(
       )
     }
 
+    // Si el estilo está vacío, usar el título
+    const estiloFinal = (estilo && estilo.trim() !== '') ? estilo.trim() : titulo.trim()
+
     // Preparar datos de actualización
     const updateData: any = {
       titulo,
@@ -121,7 +124,7 @@ export async function PUT(
       horaInicio,
       horaFin,
       nivel,
-      estilo,
+      estilo: estiloFinal,
       lugar,
       capacidad: parseInt(capacidad),
       profesorId,

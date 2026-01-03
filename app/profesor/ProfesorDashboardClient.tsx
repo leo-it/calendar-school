@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import ModalSuscriptores from '@/components/ModalSuscriptores'
 
 interface Clase {
   id: string
@@ -31,6 +32,7 @@ export default function ProfesorDashboardClient({ user }: { user: { id: string; 
   const [clases, setClases] = useState<Clase[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [claseSeleccionada, setClaseSeleccionada] = useState<Clase | null>(null)
 
   useEffect(() => {
     cargarClases()
@@ -143,7 +145,12 @@ export default function ProfesorDashboardClient({ user }: { user: { id: string; 
                 {clases.map((clase) => (
                   <tr key={clase.id}>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {clase.titulo}
+                      <button
+                        onClick={() => setClaseSeleccionada(clase)}
+                        className="text-primary-600 hover:text-primary-900 hover:underline cursor-pointer"
+                      >
+                        {clase.titulo}
+                      </button>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {diasSemana[clase.diaSemana]}
@@ -191,6 +198,19 @@ export default function ProfesorDashboardClient({ user }: { user: { id: string; 
           </div>
         )}
       </div>
+
+      {/* Modal de Suscriptores */}
+      {claseSeleccionada && (
+        <ModalSuscriptores
+          claseId={claseSeleccionada.id}
+          claseTitulo={claseSeleccionada.titulo}
+          capacidad={claseSeleccionada.capacidad}
+          onClose={() => setClaseSeleccionada(null)}
+          onActualizada={() => {
+            cargarClases()
+          }}
+        />
+      )}
     </div>
   )
 }

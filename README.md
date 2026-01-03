@@ -181,7 +181,106 @@ almanaque/
 - [ ] Panel de administración para crear/editar clases
 - [ ] Dashboard para profesores
 - [ ] Sistema de preferencias de notificación por usuario
-- [ ] Exportar calendario a iCal/Google Calendar
+- [x] Agregar clases individuales a Google Calendar
+- [ ] Sistema de membresía y control de inscripciones
+
+## 💳 Sistema de Membresía (Planificado)
+
+### Objetivo
+
+Implementar un sistema de membresía flexible donde cada alumno solo pueda inscribirse a la cantidad de clases que pagó, con diferentes modelos de cobro según la escuela.
+
+### Requisitos
+
+1. **Control de inscripciones por pago**: Cada alumno solo puede inscribirse a la cantidad de clases que pagó
+2. **Flexibilidad en modelos de cobro**: El sistema debe soportar diferentes modelos:
+   - **Por clase**: El alumno paga por cada clase individual
+   - **Por mes**: El alumno tiene acceso a un número limitado de clases por mes
+   - **Acceso ilimitado**: El alumno tiene acceso a todas las clases sin restricciones
+3. **Gestión por profesores**: Los profesores deben poder:
+   - Ver la información de membresía de cada alumno
+   - Configurar y actualizar el tipo de membresía
+   - Gestionar los créditos/clases disponibles de cada alumno
+
+### Estrategia Propuesta
+
+#### Modelo de Datos
+
+```prisma
+model Membresia {
+  id              String   @id @default(cuid())
+  userId          String
+  escuelaId       String
+  tipo            String   // "POR_CLASE", "POR_MES", "ILIMITADO"
+  clasesDisponibles Int    @default(0) // Para tipo POR_CLASE o POR_MES
+  clasesUsadas    Int      @default(0)
+  fechaInicio     DateTime
+  fechaFin        DateTime?
+  activa          Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  user    User    @relation(fields: [userId], references: [id])
+  escuela Escuela @relation(fields: [escuelaId], references: [id])
+  
+  @@unique([userId, escuelaId])
+}
+
+model Pago {
+  id              String   @id @default(cuid())
+  membresiaId     String
+  monto           Decimal
+  clasesAgregadas Int      // Cantidad de clases que se agregan con este pago
+  metodoPago      String   // "EFECTIVO", "TRANSFERENCIA", "TARJETA", etc.
+  fechaPago       DateTime @default(now())
+  notas           String?
+  
+  membresia Membresia @relation(fields: [membresiaId], references: [id])
+}
+```
+
+#### Lógica de Validación
+
+1. **Al inscribirse a una clase**:
+   - Verificar si el alumno tiene membresía activa en la escuela
+   - Para tipo "POR_CLASE" o "POR_MES": Verificar que `clasesDisponibles > clasesUsadas`
+   - Para tipo "ILIMITADO": Permitir inscripción sin restricciones
+   - Incrementar `clasesUsadas` al inscribirse
+   - Decrementar `clasesUsadas` al cancelar inscripción
+
+2. **Renovación mensual**:
+   - Para tipo "POR_MES": Resetear `clasesUsadas` al inicio de cada mes
+   - Mantener `clasesDisponibles` según el plan contratado
+
+#### Interfaz de Usuario
+
+**Panel de Profesores**:
+- Vista de alumnos con su estado de membresía
+- Formulario para crear/editar membresía
+- Registro de pagos
+- Historial de clases usadas vs disponibles
+
+**Panel de Estudiantes**:
+- Visualización de clases disponibles restantes
+- Historial de pagos
+- Estado de membresía actual
+
+### Consideraciones de Implementación
+
+1. **Flexibilidad por escuela**: Cada escuela puede tener diferentes modelos de cobro
+2. **Migración de datos**: Alumnos existentes necesitarán membresías asignadas
+3. **Notificaciones**: Alertar cuando se acerquen al límite de clases
+4. **Reportes**: Generar reportes de uso y pagos para profesores/administradores
+
+### Próximos Pasos
+
+- [ ] Diseñar esquema de base de datos detallado
+- [ ] Implementar modelos Prisma
+- [ ] Crear API endpoints para gestión de membresías
+- [ ] Desarrollar interfaz de profesores para gestión
+- [ ] Implementar validación en inscripciones
+- [ ] Agregar notificaciones de límites
+- [ ] Crear panel de estudiantes para ver estado
 
 ## 🧩 Arquitectura de Microfrontends
 
@@ -227,6 +326,36 @@ Para más información sobre la preparación para microfrontends, consulta:
 - ✅ **Despliegue independiente** de módulos
 - ✅ **Equipos autónomos** trabajando en paralelo
 - ✅ **Escalabilidad** horizontal por módulo
+
+### Casos de Uso Futuros con Microfrontends
+
+#### Mapa de Escuelas (Google Maps)
+
+Una funcionalidad futura sería crear un microfrontend independiente que muestre un mapa interactivo con Google Maps donde se visualicen todas las escuelas registradas en el sistema.
+
+**Características propuestas**:
+- 📍 **Mapa interactivo** con marcadores de todas las escuelas
+- 🔍 **Búsqueda y filtrado** de escuelas por ubicación
+- 📋 **Información detallada** de cada escuela al hacer clic en el marcador
+- 🗺️ **Rutas y direcciones** desde la ubicación del usuario
+- 🔗 **Integración** con el sistema principal mediante microfrontend
+
+**Ventajas de usar microfrontend**:
+- **Desarrollo independiente**: El equipo puede trabajar en el módulo de mapas sin afectar la aplicación principal
+- **Carga bajo demanda**: El mapa solo se carga cuando el usuario lo necesita
+- **Tecnologías específicas**: Puede usar librerías de mapas optimizadas sin afectar el bundle principal
+- **Escalabilidad**: Fácil agregar más funcionalidades de mapas sin aumentar la complejidad del core
+
+**Estructura propuesta**:
+```
+microfrontends/
+├── calendario/          # Calendario principal
+├── admin/               # Panel de administración
+├── mapa-escuelas/      # Mapa con Google Maps (nuevo)
+└── shared/             # Componentes compartidos
+```
+
+Esta arquitectura permitiría que el módulo de mapas conviva perfectamente con la aplicación principal, compartiendo datos de escuelas pero manteniendo su propia lógica de renderizado y estado.
 - ✅ **Aislamiento de errores** entre módulos
 
 ## Despliegue a Producción
@@ -304,7 +433,7 @@ Estas son las características que añaden valor al usuario final y que quedaron
 
 [ ] 3. Interoperabilidad:
 
-[ ] Implementar la funcionalidad de Exportar calendario a formatos estándar (iCal/Google Calendar).
+[x] Implementar la funcionalidad de Agregar clases individuales a Google Calendar.
 
 III. 🔒 Calidad y Testing
 [ ] 1. Pruebas de Integración:

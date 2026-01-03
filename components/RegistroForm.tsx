@@ -15,6 +15,8 @@ export default function RegistroForm({ escuelaSlug }: RegistroFormProps) {
     password: '',
     confirmPassword: '',
     name: '',
+    apellido: '',
+    dni: '',
     phone: '',
     role: 'ESTUDIANTE' as 'ESTUDIANTE' | 'PROFESOR',
     escuelaId: '',
@@ -144,6 +146,8 @@ export default function RegistroForm({ escuelaSlug }: RegistroFormProps) {
           email: formData.email,
           password: formData.password,
           name: formData.name,
+          apellido: formData.apellido || undefined,
+          dni: formData.dni || undefined,
           phone: formData.phone || undefined,
           role: formData.role,
           escuelaId: escuelaIdFinal || undefined,
@@ -187,7 +191,7 @@ export default function RegistroForm({ escuelaSlug }: RegistroFormProps) {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
-              Nombre
+              Nombre <span className="text-red-500">*</span>
             </label>
             <input
               id="name"
@@ -196,7 +200,35 @@ export default function RegistroForm({ escuelaSlug }: RegistroFormProps) {
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               required
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900"
-              placeholder="Tu nombre completo"
+              placeholder="Tu nombre"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="apellido" className="block text-sm font-medium text-gray-700 mb-1">
+              Apellido (opcional)
+            </label>
+            <input
+              id="apellido"
+              type="text"
+              value={formData.apellido}
+              onChange={(e) => setFormData({ ...formData, apellido: e.target.value })}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900"
+              placeholder="Tu apellido"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="dni" className="block text-sm font-medium text-gray-700 mb-1">
+              DNI (opcional)
+            </label>
+            <input
+              id="dni"
+              type="text"
+              value={formData.dni}
+              onChange={(e) => setFormData({ ...formData, dni: e.target.value })}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900"
+              placeholder="DNI"
             />
           </div>
 

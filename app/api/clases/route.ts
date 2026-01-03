@@ -209,10 +209,10 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Validar campos requeridos
-    if (!titulo || !horaInicio || !horaFin || !nivel || !estilo) {
+    // Validar campos requeridos (estilo es opcional, se usará el título si está vacío)
+    if (!titulo || !horaInicio || !horaFin || !nivel) {
       return NextResponse.json(
-        { error: 'Faltan campos requeridos: título, hora de inicio, hora de fin, nivel o estilo' },
+        { error: 'Faltan campos requeridos: título, hora de inicio, hora de fin o nivel' },
         { status: 400 }
       )
     }
@@ -261,6 +261,9 @@ export async function POST(request: NextRequest) {
     // El lugar será el nombre de la escuela
     const lugarFinal = escuela.nombre
 
+    // Si el estilo está vacío, usar el título
+    const estiloFinal = (estilo && estilo.trim() !== '') ? estilo.trim() : titulo.trim()
+
     const clase = await prisma.clase.create({
       data: {
         titulo,
@@ -269,7 +272,7 @@ export async function POST(request: NextRequest) {
         horaInicio,
         horaFin,
         nivel,
-        estilo: estilo || 'OTRO', // Si no se proporciona, usar OTRO
+        estilo: estiloFinal,
         lugar: lugarFinal,
         capacidad: parseInt(capacidad) || 20,
         profesorId: profesorFinalId,

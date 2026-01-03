@@ -38,7 +38,6 @@ export default function EditarClaseClient({
     fechaFin: '',
     activa: true,
   })
-  const [lugarOtro, setLugarOtro] = useState('')
 
   useEffect(() => {
     cargarDatos()
@@ -86,9 +85,9 @@ export default function EditarClaseClient({
         }
       }
 
-      if (clase.lugar && !['Duo Tricks', 'La Central', 'Otro'].includes(clase.lugar)) {
-        setLugarOtro(clase.lugar)
-        setFormData(prev => ({ ...prev, lugar: 'Otro' }))
+      // El lugar se carga directamente desde la clase
+      if (clase.lugar) {
+        setFormData(prev => ({ ...prev, lugar: clase.lugar }))
       }
     } catch (error: any) {
       setError(error.message || 'Error al cargar la clase')
@@ -103,8 +102,19 @@ export default function EditarClaseClient({
     setSaving(true)
 
     try {
-      const lugarFinal = formData.lugar === 'Otro' ? lugarOtro : formData.lugar
-      
+      // Validar que las horas estén completas (formato HH:MM)
+      if (!formData.horaInicio || !formData.horaInicio.match(/^\d{2}:\d{2}$/)) {
+        setError('Debes seleccionar una hora de inicio válida')
+        setSaving(false)
+        return
+      }
+
+      if (!formData.horaFin || !formData.horaFin.match(/^\d{2}:\d{2}$/)) {
+        setError('Debes seleccionar una hora de fin válida')
+        setSaving(false)
+        return
+      }
+
       const response = await fetch(`/api/clases/${claseId}`, {
         method: 'PUT',
         headers: {
@@ -112,7 +122,7 @@ export default function EditarClaseClient({
         },
         body: JSON.stringify({
           ...formData,
-          lugar: lugarFinal,
+          lugar: formData.lugar,
           fechaInicio: formData.fechaInicio || null,
           fechaFin: formData.fechaFin || null,
         }),
@@ -134,7 +144,6 @@ export default function EditarClaseClient({
 
   const niveles: Nivel[] = ['PRINCIPIANTE', 'INTERMEDIO', 'AVANZADO']
   const estilos: Estilo[] = ['CONTEMPORANEO', 'JAZZ', 'BALLET', 'HIP_HOP', 'URBANO', 'OTRO']
-  const lugaresComunes = ['Duo Tricks', 'La Central', 'Otro']
 
   if (loading) {
     return (
@@ -240,40 +249,15 @@ export default function EditarClaseClient({
                 <label htmlFor="lugar" className="block text-sm font-medium text-gray-700 mb-1">
                   Lugar *
                 </label>
-                <select
+                <input
                   id="lugar"
+                  type="text"
                   required
                   value={formData.lugar}
-                  onChange={(e) => {
-                    if (e.target.value !== 'Otro') {
-                      setFormData({ ...formData, lugar: e.target.value })
-                      setLugarOtro('')
-                    } else {
-                      setFormData({ ...formData, lugar: 'Otro' })
-                    }
-                  }}
+                  onChange={(e) => setFormData({ ...formData, lugar: e.target.value })}
+                  placeholder="Ej: Estudio de Danza, Centro Cultural..."
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900"
-                >
-                  <option value="">Seleccionar lugar</option>
-                  {lugaresComunes.map((lugar) => (
-                    <option key={lugar} value={lugar}>
-                      {lugar}
-                    </option>
-                  ))}
-                </select>
-                {formData.lugar === 'Otro' && (
-                  <input
-                    type="text"
-                    placeholder="Especificar lugar"
-                    required
-                    value={lugarOtro}
-                    onChange={(e) => {
-                      setLugarOtro(e.target.value)
-                      setFormData({ ...formData, lugar: e.target.value })
-                    }}
-                    className="w-full mt-2 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900"
-                  />
-                )}
+                />
               </div>
 
               {/* Hora Inicio */}
