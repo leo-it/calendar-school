@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 import bcrypt from 'bcryptjs'
+import { validateEmail, isDisposableEmail } from '@/lib/email-validation'
 
 // Forzar que esta ruta sea dinámica (no pre-renderizada)
 export const dynamic = 'force-dynamic'
@@ -22,6 +23,23 @@ export async function POST(request: NextRequest) {
     if (password.length < 6) {
       return NextResponse.json(
         { error: 'La contraseña debe tener al menos 6 caracteres' },
+        { status: 400 }
+      )
+    }
+
+    // Validar email (formato + dominio MX)
+    const emailValidation = await validateEmail(email)
+    if (!emailValidation.valid) {
+      return NextResponse.json(
+        { error: emailValidation.error || 'Email inválido' },
+        { status: 400 }
+      )
+    }
+
+    // Opcional: Rechazar emails desechables
+    if (isDisposableEmail(email)) {
+      return NextResponse.json(
+        { error: 'No se permiten emails temporales o desechables' },
         { status: 400 }
       )
     }
