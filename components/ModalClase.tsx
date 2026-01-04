@@ -96,7 +96,25 @@ export default function ModalClase({
 
     setCreandoAlumno(true)
     try {
-      const claseIdReal = clase.id.includes('-') ? clase.id.split('-')[0] : clase.id
+      // Extraer el ID real de la clase y la fecha (puede ser compuesto como "id-fecha")
+      let claseIdReal = clase.id
+      let fechaClase: string | null = null
+      
+      if (clase.id.includes('-')) {
+        const partes = clase.id.split('-')
+        claseIdReal = partes[0]
+        // Intentar extraer la fecha del formato "id-YYYY-MM-DD"
+        if (partes.length >= 4) {
+          fechaClase = `${partes[1]}-${partes[2]}-${partes[3]}`
+        }
+      }
+      
+      // Si la clase tiene fecha directamente, usarla
+      if (clase.fecha && !fechaClase) {
+        const fecha = typeof clase.fecha === 'string' ? new Date(clase.fecha) : clase.fecha
+        fechaClase = fecha.toISOString().split('T')[0]
+      }
+      
       const response = await fetch('/api/usuarios/crear-estudiante', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -104,7 +122,7 @@ export default function ModalClase({
           nombre: formularioAlumno.nombre.trim(),
           apellido: formularioAlumno.apellido?.trim() || undefined,
           dni: formularioAlumno.dni?.trim() || undefined,
-          claseId: claseIdReal,
+          claseId: fechaClase ? `${claseIdReal}-${fechaClase}` : claseIdReal,
         }),
       })
 
@@ -129,8 +147,29 @@ export default function ModalClase({
   const cargarInscripciones = async () => {
     if (!clase) return
     try {
-      const claseIdReal = clase.id.includes('-') ? clase.id.split('-')[0] : clase.id
-      const response = await fetch(`/api/clases/${claseIdReal}/subscriptions-count`)
+      // Extraer el ID real de la clase y la fecha (puede ser compuesto como "id-fecha")
+      let claseIdReal = clase.id
+      let fechaClase: string | null = null
+      
+      if (clase.id.includes('-')) {
+        const partes = clase.id.split('-')
+        claseIdReal = partes[0]
+        // Intentar extraer la fecha del formato "id-YYYY-MM-DD"
+        if (partes.length >= 4) {
+          fechaClase = `${partes[1]}-${partes[2]}-${partes[3]}`
+        }
+      }
+      
+      // Si la clase tiene fecha directamente, usarla
+      if (clase.fecha && !fechaClase) {
+        const fecha = typeof clase.fecha === 'string' ? new Date(clase.fecha) : clase.fecha
+        fechaClase = fecha.toISOString().split('T')[0]
+      }
+      
+      const url = fechaClase 
+        ? `/api/clases/${claseIdReal}/subscriptions-count?fecha=${fechaClase}`
+        : `/api/clases/${claseIdReal}/subscriptions-count`
+      const response = await fetch(url)
       if (response.ok) {
         const data = await response.json()
         setInscripciones(data)
@@ -143,9 +182,29 @@ export default function ModalClase({
   const verificarSubscripcion = async () => {
     if (!clase) return
     try {
-      // Extraer el ID real de la clase (puede ser compuesto como "id-fecha")
-      const claseIdReal = clase.id.includes('-') ? clase.id.split('-')[0] : clase.id
-      const response = await fetch(`/api/clases/check-subscription?claseId=${claseIdReal}`)
+      // Extraer el ID real de la clase y la fecha (puede ser compuesto como "id-fecha")
+      let claseIdReal = clase.id
+      let fechaClase: string | null = null
+      
+      if (clase.id.includes('-')) {
+        const partes = clase.id.split('-')
+        claseIdReal = partes[0]
+        // Intentar extraer la fecha del formato "id-YYYY-MM-DD"
+        if (partes.length >= 4) {
+          fechaClase = `${partes[1]}-${partes[2]}-${partes[3]}`
+        }
+      }
+      
+      // Si la clase tiene fecha directamente, usarla
+      if (clase.fecha && !fechaClase) {
+        const fecha = typeof clase.fecha === 'string' ? new Date(clase.fecha) : clase.fecha
+        fechaClase = fecha.toISOString().split('T')[0]
+      }
+      
+      const url = fechaClase 
+        ? `/api/clases/check-subscription?claseId=${claseIdReal}&fecha=${fechaClase}`
+        : `/api/clases/check-subscription?claseId=${claseIdReal}`
+      const response = await fetch(url)
       if (response.ok) {
         const data = await response.json()
         setEstaSubscrito(data.isSubscribed)
@@ -161,12 +220,32 @@ export default function ModalClase({
     if (!clase) return
     setSubscribiendo(true)
     try {
-      // Extraer el ID real de la clase (puede ser compuesto como "id-fecha")
-      const claseIdReal = clase.id.includes('-') ? clase.id.split('-')[0] : clase.id
+      // Extraer el ID real de la clase y la fecha (puede ser compuesto como "id-fecha")
+      let claseIdReal = clase.id
+      let fechaClase: string | null = null
+      
+      if (clase.id.includes('-')) {
+        const partes = clase.id.split('-')
+        claseIdReal = partes[0]
+        // Intentar extraer la fecha del formato "id-YYYY-MM-DD"
+        if (partes.length >= 4) {
+          fechaClase = `${partes[1]}-${partes[2]}-${partes[3]}`
+        }
+      }
+      
+      // Si la clase tiene fecha directamente, usarla
+      if (clase.fecha && !fechaClase) {
+        const fecha = typeof clase.fecha === 'string' ? new Date(clase.fecha) : clase.fecha
+        fechaClase = fecha.toISOString().split('T')[0]
+      }
+      
       const response = await fetch('/api/clases/subscribe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ claseId: claseIdReal }),
+        body: JSON.stringify({ 
+          claseId: claseIdReal,
+          fecha: fechaClase 
+        }),
       })
 
       if (response.ok) {

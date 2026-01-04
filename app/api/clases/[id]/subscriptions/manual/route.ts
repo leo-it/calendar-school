@@ -23,11 +23,31 @@ export async function POST(
     }
 
     let claseId = params.id
-    // Extraer el ID real de la clase (puede ser compuesto como "id-fecha")
-    claseId = claseId.includes('-') ? claseId.split('-')[0] : claseId
+    // Extraer el ID real de la clase y la fecha (puede ser compuesto como "id-fecha")
+    let fechaClase: Date | null = null
+    if (claseId.includes('-')) {
+      const partes = claseId.split('-')
+      claseId = partes[0]
+      // Intentar parsear la fecha del formato "id-YYYY-MM-DD"
+      if (partes.length >= 4) {
+        const fechaStr = `${partes[1]}-${partes[2]}-${partes[3]}`
+        fechaClase = new Date(fechaStr)
+        if (isNaN(fechaClase.getTime())) {
+          fechaClase = null
+        }
+      }
+    }
 
     const body = await request.json()
-    const { userId } = body
+    const { userId, fecha } = body
+    
+    // Si se proporciona fecha explícitamente, usarla
+    if (fecha) {
+      fechaClase = new Date(fecha)
+      if (isNaN(fechaClase.getTime())) {
+        return NextResponse.json({ error: 'Fecha inválida' }, { status: 400 })
+      }
+    }
 
     if (!userId) {
       return NextResponse.json({ error: 'userId es requerido' }, { status: 400 })
@@ -90,9 +110,16 @@ export async function POST(
       )
     }
 
-    // Verificar capacidad
+    // Verificar capacidad (solo para esta fecha específica si hay fecha)
+    const whereClause: any = { claseId: claseId }
+    if (fechaClase) {
+      whereClause.fecha = fechaClase
+    } else {
+      whereClause.fecha = null
+    }
+
     const count = await prisma.claseSubscription.count({
-      where: { claseId: claseId },
+      where: whereClause,
     })
 
     if (count >= clase.capacidad) {
@@ -102,18 +129,20 @@ export async function POST(
       )
     }
 
-    // Crear o verificar suscripción
+    // Crear o verificar suscripción (con fecha específica)
     const subscription = await prisma.claseSubscription.upsert({
       where: {
-        userId_claseId: {
+        userId_claseId_fecha: {
           userId: userId,
           claseId: claseId,
+          fecha: fechaClase as any, // Prisma acepta Date | null pero TypeScript necesita el cast
         },
       },
       update: {},
       create: {
         userId: userId,
         claseId: claseId,
+        fecha: fechaClase,
       },
       include: {
         user: {

@@ -12,18 +12,18 @@ datasource db {
 }
 
 model Escuela {
-  id              String   @id @default(cuid())
-  nombre          String
-  direccion       String?
-  telefono        String?
-  email           String?
-  instagram       String?
-  facebook        String?
-  whatsapp        String?
-  web             String?
-  activa          Boolean  @default(true)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id        String   @id @default(cuid())
+  nombre    String
+  direccion String?
+  telefono  String?
+  email     String?
+  instagram String?
+  facebook  String?
+  whatsapp  String?
+  web       String?
+  activa    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relaciones
   usuarios     User[]
@@ -101,15 +101,17 @@ model Clase {
 }
 
 model ClaseSubscription {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   userId    String
   claseId   String
-  createdAt DateTime @default(now())
+  fecha     DateTime? // Fecha específica de la clase (null = todas las semanas)
+  createdAt DateTime  @default(now())
 
   user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
   clase Clase @relation(fields: [claseId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, claseId])
+  @@unique([userId, claseId, fecha])
+  @@index([claseId, fecha])
 }
 
 model Notificacion {

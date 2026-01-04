@@ -23,8 +23,31 @@ export async function GET(
     }
 
     let claseId = params.id
-    // Extraer el ID real de la clase (puede ser compuesto como "id-fecha")
-    claseId = claseId.includes('-') ? claseId.split('-')[0] : claseId
+    const { searchParams } = new URL(request.url)
+    const fechaParam = searchParams.get('fecha')
+
+    // Extraer el ID real de la clase y la fecha (puede ser compuesto como "id-fecha")
+    let fechaClase: Date | null = null
+    if (claseId.includes('-')) {
+      const partes = claseId.split('-')
+      claseId = partes[0]
+      // Intentar parsear la fecha del formato "id-YYYY-MM-DD"
+      if (partes.length >= 4) {
+        const fechaStr = `${partes[1]}-${partes[2]}-${partes[3]}`
+        fechaClase = new Date(fechaStr)
+        if (isNaN(fechaClase.getTime())) {
+          fechaClase = null
+        }
+      }
+    }
+
+    // Si se proporciona fecha explícitamente, usarla
+    if (fechaParam) {
+      fechaClase = new Date(fechaParam)
+      if (isNaN(fechaClase.getTime())) {
+        fechaClase = null
+      }
+    }
 
     // Obtener el usuario completo
     const user = await prisma.user.findUnique({
@@ -69,11 +92,16 @@ export async function GET(
       return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
     }
 
-    // Obtener todas las suscripciones de la clase
+    // Obtener todas las suscripciones de la clase (solo para esta fecha específica si hay fecha)
+    const whereClause: any = { claseId: claseId }
+    if (fechaClase) {
+      whereClause.fecha = fechaClase
+    } else {
+      whereClause.fecha = null
+    }
+
     const subscriptions = await prisma.claseSubscription.findMany({
-      where: {
-        claseId: claseId,
-      },
+      where: whereClause,
       include: {
         user: {
           select: {

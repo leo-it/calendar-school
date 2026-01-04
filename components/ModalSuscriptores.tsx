@@ -64,9 +64,23 @@ export default function ModalSuscriptores({
     setLoading(true)
     setError('')
     try {
-      // Extraer el ID real de la clase
-      const idReal = claseId.includes('-') ? claseId.split('-')[0] : claseId
-      const response = await fetch(`/api/clases/${idReal}/subscriptions`)
+      // Extraer el ID real de la clase y la fecha (puede ser compuesto como "id-fecha")
+      let idReal = claseId
+      let fechaClase: string | null = null
+      
+      if (claseId.includes('-')) {
+        const partes = claseId.split('-')
+        idReal = partes[0]
+        // Intentar extraer la fecha del formato "id-YYYY-MM-DD"
+        if (partes.length >= 4) {
+          fechaClase = `${partes[1]}-${partes[2]}-${partes[3]}`
+        }
+      }
+      
+      const url = fechaClase 
+        ? `/api/clases/${idReal}/subscriptions?fecha=${fechaClase}`
+        : `/api/clases/${idReal}/subscriptions`
+      const response = await fetch(url)
       
       if (!response.ok) {
         const data = await response.json()

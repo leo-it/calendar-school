@@ -111,11 +111,31 @@ export async function POST(request: NextRequest) {
 
     // Si se proporciona claseId, inscribir al estudiante automáticamente
     if (claseId) {
-      const claseIdReal = claseId.includes('-') ? claseId.split('-')[0] : claseId
+      let claseIdReal = claseId
+      let fechaClase: Date | null = null
       
-      // Verificar capacidad
+      // Extraer el ID real de la clase y la fecha (puede ser compuesto como "id-fecha")
+      if (claseId.includes('-')) {
+        const partes = claseId.split('-')
+        claseIdReal = partes[0]
+        // Intentar parsear la fecha del formato "id-YYYY-MM-DD"
+        if (partes.length >= 4) {
+          const fechaStr = `${partes[1]}-${partes[2]}-${partes[3]}`
+          fechaClase = new Date(fechaStr)
+          if (isNaN(fechaClase.getTime())) {
+            fechaClase = null
+          }
+        }
+      }
+      
+      // Verificar capacidad (solo para esta fecha específica si hay fecha)
+      const whereClause: any = { 
+        claseId: claseIdReal,
+        fecha: fechaClase || null
+      }
+      
       const count = await prisma.claseSubscription.count({
-        where: { claseId: claseIdReal },
+        where: whereClause,
       })
 
       const clase = await prisma.clase.findUnique({
@@ -128,6 +148,7 @@ export async function POST(request: NextRequest) {
           data: {
             userId: estudiante.id,
             claseId: claseIdReal,
+            fecha: fechaClase || null,
           },
         })
       }
