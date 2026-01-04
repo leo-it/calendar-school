@@ -7,6 +7,7 @@ import { format, startOfWeek, addDays, parseISO, isSameDay } from 'date-fns'
 import { es } from 'date-fns/locale/es'
 import Filtros from '@/components/Filtros'
 import VistaCalendario from '@/components/VistaCalendario'
+import AppHeader from '@/components/AppHeader'
 import { Clase, Profesor } from '@prisma/client'
 import { Nivel } from '@/types/enums'
 
@@ -26,7 +27,6 @@ export default function CalendarioClient({ user }: { user: { id: string; email: 
   const [clasesFiltradas, setClasesFiltradas] = useState<ClaseConProfesor[]>([])
   const [loading, setLoading] = useState(true)
   const [errorClases, setErrorClases] = useState('')
-  const [menuAbierto, setMenuAbierto] = useState(false)
   
   // Filtros
   const [filtroProfesor, setFiltroProfesor] = useState<string>('todos')
@@ -165,157 +165,39 @@ export default function CalendarioClient({ user }: { user: { id: string; email: 
     new Set(clases.map(c => ({ id: c.profesorId, name: c.profesor.name })))
   ).map(p => ({ id: p.id, name: p.name }))
 
+  const subtitle = `${session?.user?.name || session?.user?.email}${session?.user?.role ? ` • ${session.user.role}` : ''}`
+
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">Almanaque de Clases</h1>
-              <p className="text-sm text-gray-500">
-                {session?.user?.name || session?.user?.email}
-                {session?.user?.role && ` • ${session.user.role}`}
-                {(user.role === 'ESTUDIANTE' || user.role === 'PROFESOR') && nombreEscuela && (
-                  <span className="ml-2 text-primary-600 font-medium">• {nombreEscuela}</span>
-                )}
-              </p>
-            </div>
-            
-            {/* Desktop: Botones visibles */}
-            <div className="hidden md:flex items-center gap-4">
-              {(user.role === 'ADMIN' || (user.role === 'PROFESOR' && (user as any).esAdminEscuela)) && (
-                <button
-                  onClick={() => router.push('/admin')}
-                  className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm font-medium"
-                >
-                  Panel Admin
-                </button>
-              )}
-              {user.role === 'PROFESOR' && (
-                <button
-                  onClick={() => router.push('/profesor')}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium"
-                >
-                  Dashboard
-                </button>
-              )}
-              {(user.role === 'ADMIN' || user.role === 'PROFESOR') && (
-                <button
-                  onClick={() => router.push('/clases/nueva')}
-                  className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 text-sm font-medium"
-                >
-                  + Nueva Clase
-                </button>
-              )}
-              <button
-                onClick={() => signOut({ callbackUrl: '/login' })}
-                className="px-4 py-2 text-sm text-gray-700 hover:text-gray-900"
-              >
-                Cerrar Sesión
-              </button>
-            </div>
-
-            {/* Mobile: Menú de elipsis */}
-            <div className="md:hidden relative">
-              <button
-                onClick={() => setMenuAbierto(!menuAbierto)}
-                className="p-2 text-gray-700 hover:text-gray-900 focus:outline-none"
-                aria-label="Menú de opciones"
-              >
-                <svg
-                  className="w-6 h-6"
-                  fill="none"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-                </svg>
-              </button>
-
-              {/* Menú desplegable */}
-              {menuAbierto && (
-                <>
-                  {/* Overlay para cerrar al hacer clic fuera */}
-                  <div
-                    className="fixed inset-0 z-10"
-                    onClick={() => setMenuAbierto(false)}
-                  />
-                  {/* Menú */}
-                  <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 z-20">
-                    <div className="py-1">
-                      {(user.role === 'ADMIN' || (user.role === 'PROFESOR' && (user as any).esAdminEscuela)) && (
-                        <button
-                          onClick={() => {
-                            router.push('/admin')
-                            setMenuAbierto(false)
-                          }}
-                          className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                        >
-                          Panel Admin
-                        </button>
-                      )}
-                      {user.role === 'PROFESOR' && (
-                        <button
-                          onClick={() => {
-                            router.push('/profesor')
-                            setMenuAbierto(false)
-                          }}
-                          className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                        >
-                          Dashboard
-                        </button>
-                      )}
-                      {(user.role === 'ADMIN' || user.role === 'PROFESOR') && (
-                        <button
-                          onClick={() => {
-                            router.push('/clases/nueva')
-                            setMenuAbierto(false)
-                          }}
-                          className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                        >
-                          + Nueva Clase
-                        </button>
-                      )}
-                      <div className="border-t border-gray-200 my-1" />
-                      <button
-                        onClick={() => {
-                          signOut({ callbackUrl: '/login' })
-                          setMenuAbierto(false)
-                        }}
-                        className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
-                      >
-                        Cerrar Sesión
-                      </button>
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      </header>
+      <AppHeader
+        title="Almanaque de Clases"
+        subtitle={subtitle}
+        user={user}
+        currentPath="/calendario"
+        nombreEscuela={nombreEscuela}
+      />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Controles de Navegación */}
         <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
-          <div className="flex justify-between items-center">
-            <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+            {/* Botones de navegación */}
+            <div className="flex gap-2 flex-1">
               <button
                 onClick={() => {
                   const nuevaFecha = addDays(fechaSeleccionada, vista === 'semana' ? -7 : -1)
                   setFechaSeleccionada(nuevaFecha)
                 }}
-                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+                className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 bg-white text-gray-700 rounded-lg border border-gray-300 hover:bg-primary-50 hover:border-primary-300 hover:text-primary-700 transition-all duration-200 shadow-sm hover:shadow-md active:scale-95 flex-1 sm:flex-initial"
               >
-                ← Anterior
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+                <span className="font-medium text-sm sm:text-base">Anterior</span>
               </button>
               <button
                 onClick={() => setFechaSeleccionada(new Date())}
-                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+                className="px-3 sm:px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-all duration-200 shadow-sm hover:shadow-md active:scale-95 font-medium text-sm sm:text-base flex-1 sm:flex-initial"
               >
                 Hoy
               </button>
@@ -324,17 +206,29 @@ export default function CalendarioClient({ user }: { user: { id: string; email: 
                   const nuevaFecha = addDays(fechaSeleccionada, vista === 'semana' ? 7 : 1)
                   setFechaSeleccionada(nuevaFecha)
                 }}
-                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+                className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 bg-white text-gray-700 rounded-lg border border-gray-300 hover:bg-primary-50 hover:border-primary-300 hover:text-primary-700 transition-all duration-200 shadow-sm hover:shadow-md active:scale-95 flex-1 sm:flex-initial"
               >
-                Siguiente →
+                <span className="font-medium text-sm sm:text-base">Siguiente</span>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
               </button>
             </div>
+            {/* Botón de cambio de vista */}
             {vista === 'dia' && (
               <button
                 onClick={() => setVista('semana')}
-                className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
+                className="w-full sm:w-auto px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-all duration-200 shadow-sm hover:shadow-md active:scale-95 font-medium text-sm sm:text-base"
               >
                 Ver Semana
+              </button>
+            )}
+            {vista === 'semana' && (
+              <button
+                onClick={() => setVista('dia')}
+                className="w-full sm:w-auto px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-all duration-200 shadow-sm hover:shadow-md active:scale-95 font-medium text-sm sm:text-base"
+              >
+                Ver Día
               </button>
             )}
           </div>

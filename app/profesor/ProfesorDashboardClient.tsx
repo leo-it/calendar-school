@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import ModalSuscriptores from '@/components/ModalSuscriptores'
+import AppHeader from '@/components/AppHeader'
 
 interface Clase {
   id: string
@@ -152,27 +153,11 @@ export default function ProfesorDashboardClient({ user }: { user: { id: string; 
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="bg-white shadow">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <h1 className="text-2xl font-bold text-gray-900">Dashboard de Profesor</h1>
-            <div className="flex gap-4">
-              <Link
-                href="/calendario"
-                className="px-4 py-2 text-gray-700 hover:text-gray-900"
-              >
-                Calendario
-              </Link>
-              <Link
-                href="/clases/nueva"
-                className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
-              >
-                Nueva Clase
-              </Link>
-            </div>
-          </div>
-        </div>
-      </div>
+      <AppHeader
+        title="Dashboard de Profesor"
+        user={user}
+        currentPath="/profesor"
+      />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Información de Contacto de la Escuela */}

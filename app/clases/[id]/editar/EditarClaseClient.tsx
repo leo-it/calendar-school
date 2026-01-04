@@ -6,6 +6,7 @@ import { useSession } from 'next-auth/react'
 import { Profesor } from '@prisma/client'
 import { Nivel, Estilo } from '@/types/enums'
 import TimePicker from '@/components/TimePicker'
+import AppHeader from '@/components/AppHeader'
 
 export default function EditarClaseClient({ 
   claseId, 
@@ -158,34 +159,12 @@ export default function EditarClaseClient({
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">Editar Clase</h1>
-              <p className="text-sm text-gray-500">
-                {session?.user?.name || session?.user?.email}
-              </p>
-            </div>
-            <div className="flex items-center gap-4">
-              {user.role === 'ADMIN' && (
-                <button
-                  onClick={() => router.push('/admin')}
-                  className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm font-medium"
-                >
-                  Panel Admin
-                </button>
-              )}
-              <button
-                onClick={() => router.push('/calendario')}
-                className="px-4 py-2 text-sm text-gray-700 hover:text-gray-900"
-              >
-                ← Volver al Calendario
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
+      <AppHeader
+        title="Editar Clase"
+        subtitle={session?.user?.name || session?.user?.email}
+        user={user}
+        currentPath={`/clases/${claseId}/editar`}
+      />
 
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="bg-white rounded-lg shadow-sm p-6">
