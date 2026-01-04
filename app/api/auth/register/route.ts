@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 import bcrypt from 'bcryptjs'
 import { validateEmail, isDisposableEmail } from '@/lib/email-validation'
+import { registerSchema } from '@/lib/validations'
 
 // Forzar que esta ruta sea dinámica (no pre-renderizada)
 export const dynamic = 'force-dynamic'
@@ -10,38 +11,35 @@ export const dynamic = 'force-dynamic'
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { email, password, name, apellido, dni, role, phone, escuelaId, codigoInvitacion, nombreEscuela } = body
-
-    // Validaciones
-    if (!email || !password) {
+    
+    // Validar y sanitizar con Zod (ya incluye sanitización)
+    const validation = registerSchema.safeParse(body)
+    if (!validation.success) {
       return NextResponse.json(
-        { error: 'Email y contraseña son requeridos' },
+        { error: 'Datos de registro inválidos', details: validation.error.errors },
         { status: 400 }
       )
     }
+    
+    const { email, password, name, apellido, dni, role, phone, escuelaId, codigoInvitacion, nombreEscuela } = validation.data
 
-    if (password.length < 6) {
-      return NextResponse.json(
-        { error: 'La contraseña debe tener al menos 6 caracteres' },
-        { status: 400 }
-      )
-    }
+    // Validar email (formato + dominio MX) - adicional a Zod
+    if (email) {
+      const emailValidation = await validateEmail(email)
+      if (!emailValidation.valid) {
+        return NextResponse.json(
+          { error: emailValidation.error || 'Email inválido' },
+          { status: 400 }
+        )
+      }
 
-    // Validar email (formato + dominio MX)
-    const emailValidation = await validateEmail(email)
-    if (!emailValidation.valid) {
-      return NextResponse.json(
-        { error: emailValidation.error || 'Email inválido' },
-        { status: 400 }
-      )
-    }
-
-    // Opcional: Rechazar emails desechables
-    if (isDisposableEmail(email)) {
-      return NextResponse.json(
-        { error: 'No se permiten emails temporales o desechables' },
-        { status: 400 }
-      )
+      // Opcional: Rechazar emails desechables
+      if (isDisposableEmail(email)) {
+        return NextResponse.json(
+          { error: 'No se permiten emails temporales o desechables' },
+          { status: 400 }
+        )
+      }
     }
 
     // Verificar si el usuario ya existe

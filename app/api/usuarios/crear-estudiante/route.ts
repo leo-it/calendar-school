@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
 import crypto from 'crypto'
+import { createEstudianteSchema } from '@/lib/validations'
 
 // Forzar que esta ruta sea dinámica (no pre-renderizada)
 export const dynamic = 'force-dynamic'
@@ -22,15 +23,17 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { nombre, apellido, dni, claseId } = body
-
-    // Validaciones
-    if (!nombre || nombre.trim() === '') {
+    
+    // Validar y sanitizar con Zod (ya incluye sanitización)
+    const validation = createEstudianteSchema.safeParse(body)
+    if (!validation.success) {
       return NextResponse.json(
-        { error: 'El nombre es obligatorio' },
+        { error: 'Datos inválidos', details: validation.error.errors },
         { status: 400 }
       )
     }
+    
+    const { nombre, apellido, dni, claseId } = validation.data
 
     // Obtener el usuario completo
     const user = await prisma.user.findUnique({

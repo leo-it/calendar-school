@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { updateClaseSchema } from '@/lib/validations'
 
 // Forzar que esta ruta sea dinámica (no pre-renderizada)
 export const dynamic = 'force-dynamic'
@@ -78,7 +79,7 @@ export async function PUT(
     // Verificar que la clase existe y pertenece a la escuela del usuario (si no es ADMIN)
     const claseExistente = await prisma.clase.findUnique({
       where: { id: params.id },
-      select: { escuelaId: true }
+      select: { escuelaId: true, titulo: true }
     })
 
     if (!claseExistente) {
@@ -90,6 +91,16 @@ export async function PUT(
     }
 
     const body = await request.json()
+    
+    // Validar y sanitizar con Zod (ya incluye sanitización)
+    const validation = updateClaseSchema.safeParse(body)
+    if (!validation.success) {
+      return NextResponse.json(
+        { error: 'Datos de clase inválidos', details: validation.error.errors },
+        { status: 400 }
+      )
+    }
+    
     const {
       titulo,
       descripcion,
@@ -105,36 +116,42 @@ export async function PUT(
       fechaFin,
       activa,
       escuelaId, // Solo para ADMIN
-    } = body
+    } = validation.data
 
-    // Validar y convertir diaSemana
-    const diaSemanaNum = typeof diaSemana === 'string' ? parseInt(diaSemana, 10) : diaSemana
-    if (isNaN(diaSemanaNum) || diaSemanaNum < 0 || diaSemanaNum > 6) {
-      return NextResponse.json(
-        { error: 'Día de la semana inválido. Debe ser un número entre 0 y 6' },
-        { status: 400 }
-      )
+    // Validar y convertir diaSemana (si se proporciona)
+    let diaSemanaNum: number | undefined
+    if (diaSemana !== undefined) {
+      diaSemanaNum = typeof diaSemana === 'string' ? parseInt(diaSemana, 10) : diaSemana
+      if (isNaN(diaSemanaNum) || diaSemanaNum < 0 || diaSemanaNum > 6) {
+        return NextResponse.json(
+          { error: 'Día de la semana inválido. Debe ser un número entre 0 y 6' },
+          { status: 400 }
+        )
+      }
     }
 
-    // Si el estilo está vacío, usar el título
-    const estiloFinal = (estilo && estilo.trim() !== '') ? estilo.trim() : titulo.trim()
+    // Si el estilo está vacío, usar el título (nuevo o existente)
+    const tituloFinal = titulo || claseExistente.titulo
+    const estiloFinal = (estilo && estilo.trim() !== '') ? estilo.trim() : tituloFinal.trim()
 
-    // Preparar datos de actualización
-    const updateData: any = {
-      titulo,
-      descripcion,
-      diaSemana: diaSemanaNum,
-      horaInicio,
-      horaFin,
-      nivel,
-      estilo: estiloFinal,
-      lugar,
-      capacidad: typeof capacidad === 'number' ? capacidad : (capacidad ? parseInt(String(capacidad)) : 20),
-      profesorId,
-      fechaInicio: fechaInicio ? new Date(fechaInicio) : null,
-      fechaFin: fechaFin ? new Date(fechaFin) : null,
-      activa: activa !== undefined ? activa : true,
+    // Preparar datos de actualización (solo incluir campos que se proporcionaron)
+    const updateData: any = {}
+    
+    if (titulo !== undefined) updateData.titulo = titulo
+    if (descripcion !== undefined) updateData.descripcion = descripcion
+    if (diaSemanaNum !== undefined) updateData.diaSemana = diaSemanaNum
+    if (horaInicio !== undefined) updateData.horaInicio = horaInicio
+    if (horaFin !== undefined) updateData.horaFin = horaFin
+    if (nivel !== undefined) updateData.nivel = nivel
+    if (estilo !== undefined) updateData.estilo = estiloFinal
+    if (lugar !== undefined) updateData.lugar = lugar
+    if (capacidad !== undefined) {
+      updateData.capacidad = typeof capacidad === 'number' ? capacidad : (capacidad ? parseInt(String(capacidad)) : 20)
     }
+    if (profesorId !== undefined) updateData.profesorId = profesorId
+    if (fechaInicio !== undefined) updateData.fechaInicio = fechaInicio ? new Date(fechaInicio) : null
+    if (fechaFin !== undefined) updateData.fechaFin = fechaFin ? new Date(fechaFin) : null
+    if (activa !== undefined) updateData.activa = activa
 
     // Solo los ADMIN pueden cambiar la escuela
     if (session.user.role === 'ADMIN' && escuelaId) {

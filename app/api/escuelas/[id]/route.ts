@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { updateEscuelaSchema } from '@/lib/validations'
 
 // Forzar que esta ruta sea dinámica (no pre-renderizada)
 export const dynamic = 'force-dynamic'
@@ -88,6 +89,16 @@ export async function PUT(
     }
 
     const body = await request.json()
+    
+    // Validar y sanitizar con Zod (ya incluye sanitización)
+    const validation = updateEscuelaSchema.safeParse(body)
+    if (!validation.success) {
+      return NextResponse.json(
+        { error: 'Datos de escuela inválidos', details: validation.error.errors },
+        { status: 400 }
+      )
+    }
+    
     const { 
       nombre, 
       direccion, 
@@ -98,7 +109,7 @@ export async function PUT(
       whatsapp,
       web,
       activa 
-    } = body
+    } = validation.data
 
     // Solo ADMIN puede cambiar nombre y activa
     const updateData: any = {}
@@ -107,7 +118,7 @@ export async function PUT(
       if (activa !== undefined) updateData.activa = activa
     }
     
-    // Todos los campos de contacto pueden ser editados
+    // Todos los campos de contacto pueden ser editados (ya sanitizados por Zod)
     updateData.direccion = direccion !== undefined ? (direccion || null) : undefined
     updateData.telefono = telefono !== undefined ? (telefono || null) : undefined
     updateData.email = email !== undefined ? (email || null) : undefined
