@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { signIn } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import InstallPWAButton from './InstallPWAButton'
 
 interface LoginFormProps {
   escuelaSlug?: string
@@ -114,6 +115,8 @@ export default function LoginForm({ escuelaSlug }: LoginFormProps) {
           >
             {loading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
           </button>
+
+          <InstallPWAButton />
 
           <div className="text-center text-sm text-gray-600 mt-4">
             ¿No tienes una cuenta?{' '}

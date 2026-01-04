@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import InstallPWAButton from './InstallPWAButton'
 
 interface RegistroFormProps {
   escuelaSlug?: string
@@ -497,6 +498,8 @@ export default function RegistroForm({ escuelaSlug }: RegistroFormProps) {
           >
             {loading ? 'Registrando...' : 'Registrarse'}
           </button>
+
+          <InstallPWAButton />
 
           <div className="text-center text-sm text-gray-600">
             ¿Ya tienes una cuenta?{' '}
