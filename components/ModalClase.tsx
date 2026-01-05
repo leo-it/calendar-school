@@ -133,8 +133,28 @@ export default function ModalClase({
         await cargarInscripciones()
         onActualizada()
       } else {
-        const error = await response.json()
-        alert(error.error || 'Error al crear estudiante')
+        const errorData = await response.json()
+        // Mostrar mensajes de error detallados al usuario
+        let errorMessage = errorData.mensaje || errorData.error || 'Error al crear estudiante'
+        
+        // Si hay detalles, agregarlos de forma más legible
+        if (errorData.details && Array.isArray(errorData.details) && errorData.details.length > 0) {
+          const detalles = errorData.details
+            .map((d: any) => {
+              if (typeof d === 'string') return d
+              if (d.mensaje) return `${d.campo || 'Campo'}: ${d.mensaje}`
+              if (d.message) return d.message
+              return JSON.stringify(d)
+            })
+            .filter(Boolean)
+            .join('\n')
+          
+          if (detalles && !errorMessage.includes(detalles)) {
+            errorMessage = `${errorMessage}\n\n${detalles}`
+          }
+        }
+        
+        alert(errorMessage)
       }
     } catch (error) {
       console.error('Error al crear estudiante:', error)
@@ -253,8 +273,15 @@ export default function ModalClase({
         cargarInscripciones() // Actualizar conteo de inscripciones
         onActualizada()
       } else {
-        const error = await response.json()
-        alert(error.error || 'Error al subscribirse')
+        const errorData = await response.json()
+        let errorMessage = errorData.error || 'Error al subscribirse'
+        
+        // Si hay detalles, agregarlos
+        if (errorData.details) {
+          errorMessage = `${errorMessage}\n\n${errorData.details}`
+        }
+        
+        alert(errorMessage)
       }
     } catch (error) {
       console.error('Error al subscribirse:', error)
@@ -285,8 +312,15 @@ export default function ModalClase({
         cargarInscripciones() // Actualizar conteo de inscripciones
         onActualizada()
       } else {
-        const error = await response.json()
-        alert(error.error || 'Error al darse de baja')
+        const errorData = await response.json()
+        let errorMessage = errorData.error || 'Error al darse de baja'
+        
+        // Si hay detalles, agregarlos
+        if (errorData.details) {
+          errorMessage = `${errorMessage}\n\n${errorData.details}`
+        }
+        
+        alert(errorMessage)
       }
     } catch (error) {
       console.error('Error al darse de baja:', error)

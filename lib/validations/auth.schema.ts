@@ -83,9 +83,32 @@ export const createEstudianteSchema = z.object({
     .optional()
     .nullable(),
   claseId: z.string()
-    .cuid()
-    .transform((val) => sanitizeId(val))
+    .refine((val) => {
+      if (!val) return true // Permitir null/undefined
+      // Aceptar formato "id-fecha" o solo CUID
+      if (val.includes('-')) {
+        const partes = val.split('-')
+        // Si tiene formato "id-YYYY-MM-DD", validar solo el ID
+        if (partes.length >= 4) {
+          return /^[a-z0-9]{25}$/.test(partes[0]) // Validar formato CUID básico
+        }
+      }
+      // Validar como CUID si no tiene formato compuesto
+      return /^[a-z0-9]{25}$/.test(val)
+    }, { message: 'ID de clase inválido' })
+    .transform((val) => {
+      if (!val) return null
+      // Extraer solo el ID si viene como "id-fecha"
+      if (val.includes('-')) {
+        const partes = val.split('-')
+        if (partes.length >= 4) {
+          return sanitizeId(partes[0])
+        }
+      }
+      return sanitizeId(val)
+    })
     .optional()
     .nullable(),
-})
+  fecha: z.string().datetime().optional().nullable(), // Añadido para la fecha de la clase
+}).passthrough() // Permitir campos adicionales sin validarlos (como password si viene)
 

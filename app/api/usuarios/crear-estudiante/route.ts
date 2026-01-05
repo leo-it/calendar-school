@@ -24,11 +24,24 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json()
     
+    // Remover campos que no deberían estar en el body (como password)
+    const { password, ...bodySinPassword } = body
+    
     // Validar y sanitizar con Zod (ya incluye sanitización)
-    const validation = createEstudianteSchema.safeParse(body)
+    const validation = createEstudianteSchema.safeParse(bodySinPassword)
     if (!validation.success) {
+      // Formatear errores para que sean más legibles
+      const erroresFormateados = validation.error.errors.map(err => ({
+        campo: err.path.join('.'),
+        mensaje: err.message,
+      }))
+      
       return NextResponse.json(
-        { error: 'Datos inválidos', details: validation.error.errors },
+        { 
+          error: 'Datos inválidos', 
+          details: erroresFormateados,
+          mensaje: erroresFormateados.map(e => `${e.campo}: ${e.mensaje}`).join(', ')
+        },
         { status: 400 }
       )
     }

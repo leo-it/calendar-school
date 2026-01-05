@@ -70,10 +70,24 @@ export async function DELETE(request: NextRequest) {
     })
 
     return NextResponse.json({ message: 'Te has dado de baja correctamente' })
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error al darse de baja de clase:', error)
+    
+    if (error.message?.includes('fecha') || error.message?.includes('ClaseSubscription.fecha')) {
+      return NextResponse.json(
+        { 
+          error: 'Error de base de datos: La columna fecha no existe. Por favor, ejecuta la migración SQL_MIGRACION.sql',
+          details: error.message 
+        },
+        { status: 500 }
+      )
+    }
+    
     return NextResponse.json(
-      { error: 'Error al darse de baja' },
+      { 
+        error: 'Error al darse de baja',
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      },
       { status: 500 }
     )
   }

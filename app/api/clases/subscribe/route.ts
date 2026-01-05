@@ -70,10 +70,32 @@ export async function POST(request: NextRequest) {
     })
 
     return NextResponse.json(subscription)
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error al subscribirse a clase:', error)
+    
+    // Proporcionar mensajes de error más específicos
+    if (error.code === 'P2002') {
+      return NextResponse.json(
+        { error: 'Ya estás inscrito en esta clase para esta fecha' },
+        { status: 400 }
+      )
+    }
+    
+    if (error.message?.includes('fecha') || error.message?.includes('ClaseSubscription.fecha')) {
+      return NextResponse.json(
+        { 
+          error: 'Error de base de datos: La columna fecha no existe. Por favor, ejecuta la migración SQL_MIGRACION.sql',
+          details: error.message 
+        },
+        { status: 500 }
+      )
+    }
+    
     return NextResponse.json(
-      { error: 'Error al subscribirse' },
+      { 
+        error: 'Error al subscribirse',
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      },
       { status: 500 }
     )
   }

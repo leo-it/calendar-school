@@ -122,9 +122,20 @@ export default function TarjetaClase({
         setEstaSubscrito(true)
         cargarInscripciones() // Actualizar conteo de inscripciones
         onActualizada()
+      } else {
+        const errorData = await response.json()
+        let errorMessage = errorData.error || 'Error al subscribirse'
+        
+        // Si hay detalles, agregarlos
+        if (errorData.details) {
+          errorMessage = `${errorMessage}\n\n${errorData.details}`
+        }
+        
+        alert(errorMessage)
       }
     } catch (error) {
       console.error('Error al subscribirse:', error)
+      alert('Error al subscribirse. Por favor, intenta nuevamente.')
     } finally {
       setSubscribiendo(false)
     }
