@@ -2,8 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import ModalSuscriptores from '@/components/ModalSuscriptores'
 import AppHeader from '@/components/AppHeader'
 
 interface Clase {
@@ -29,11 +27,9 @@ interface Clase {
 }
 
 export default function ProfesorDashboardClient({ user }: { user: { id: string; email: string; name?: string | null; role: string } }) {
-  const router = useRouter()
   const [clases, setClases] = useState<Clase[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [claseSeleccionada, setClaseSeleccionada] = useState<Clase | null>(null)
   const [mostrarInfoContacto, setMostrarInfoContacto] = useState(false)
   const [infoEscuela, setInfoEscuela] = useState<any>(null)
   const [editandoInfo, setEditandoInfo] = useState(false)
@@ -126,26 +122,6 @@ export default function ProfesorDashboardClient({ user }: { user: { id: string; 
       setError('Error al cargar clases')
     } finally {
       setLoading(false)
-    }
-  }
-
-  const handleEliminarClase = async (id: string) => {
-    if (!confirm('¿Estás seguro de eliminar esta clase?')) return
-
-    try {
-      const response = await fetch(`/api/clases/${id}`, {
-        method: 'DELETE',
-      })
-
-      if (!response.ok) {
-        const data = await response.json()
-        setError(data.error || 'Error al eliminar clase')
-        return
-      }
-
-      cargarClases()
-    } catch (err) {
-      setError('Error al eliminar clase')
     }
   }
 
@@ -365,7 +341,6 @@ export default function ProfesorDashboardClient({ user }: { user: { id: string; 
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Lugar</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Capacidad</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Acciones</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -399,27 +374,6 @@ export default function ProfesorDashboardClient({ user }: { user: { id: string; 
                         {clase.activa ? 'Activa' : 'Inactiva'}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <button
-                        onClick={() => setClaseSeleccionada(clase)}
-                        className="text-primary-600 hover:text-primary-900 mr-4 font-medium"
-                        title="Ver y gestionar alumnos inscritos"
-                      >
-                        👥 Alumnos
-                      </button>
-                      <Link
-                        href={`/clases/${clase.id}/editar`}
-                        className="text-primary-600 hover:text-primary-900 mr-4"
-                      >
-                        Editar
-                      </Link>
-                      <button
-                        onClick={() => handleEliminarClase(clase.id)}
-                        className="text-red-600 hover:text-red-900"
-                      >
-                        Eliminar
-                      </button>
-                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -427,19 +381,6 @@ export default function ProfesorDashboardClient({ user }: { user: { id: string; 
           </div>
         )}
       </div>
-
-      {/* Modal de Suscriptores */}
-      {claseSeleccionada && (
-        <ModalSuscriptores
-          claseId={claseSeleccionada.id}
-          claseTitulo={claseSeleccionada.titulo}
-          capacidad={claseSeleccionada.capacidad}
-          onClose={() => setClaseSeleccionada(null)}
-          onActualizada={() => {
-            cargarClases()
-          }}
-        />
-      )}
     </div>
   )
 }
