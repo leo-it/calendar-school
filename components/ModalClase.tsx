@@ -458,6 +458,7 @@ export default function ModalClase({
   }
 
   const ejecutarDesuscripcion = async () => {
+    if (!clase) return
     setDesubscribiendo(true)
     try {
       // Extraer el ID real de la clase (puede ser compuesto como "id-fecha")
@@ -854,7 +855,7 @@ export default function ModalClase({
                             </div>
                             <div>
                               <label className="block text-xs font-medium text-gray-600 mb-1">
-                                Email (opcional, puede usar "-")
+                                Email (opcional, puede usar &quot;-&quot;)
                               </label>
                               <input
                                 type="email"

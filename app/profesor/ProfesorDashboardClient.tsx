@@ -310,7 +310,7 @@ export default function ProfesorDashboardClient({ user }: { user: { id: string; 
                 )}
                 {!infoEscuela.direccion && !infoEscuela.telefono && !infoEscuela.email && 
                  !infoEscuela.whatsapp && !infoEscuela.instagram && !infoEscuela.facebook && !infoEscuela.web && (
-                  <p className="text-gray-500 text-sm">No hay información de contacto configurada. Haz clic en "Editar" para agregar.</p>
+                  <p className="text-gray-500 text-sm">No hay información de contacto configurada. Haz clic en &quot;Editar&quot; para agregar.</p>
                 )}
               </div>
             )}

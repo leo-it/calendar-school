@@ -7,11 +7,13 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "test": "bash scripts/test.sh",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:studio": "prisma studio",
     "seed": "tsx scripts/seed.ts",
-    "generate:icons": "node scripts/generar-iconos.js"
+    "generate:icons": "node scripts/generar-iconos.js",
+    "prepare": "husky"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
@@ -39,6 +41,7 @@
     "autoprefixer": "^10.0.1",
     "eslint": "^8",
     "eslint-config-next": "14.0.4",
+    "husky": "^9.1.7",
     "postcss": "^8",
     "prisma": "^5.22.0",
     "sharp": "^0.34.5",

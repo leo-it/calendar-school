@@ -1,0 +1,27 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+echo "🔨 Running pre-commit checks..."
+echo ""
+
+# Ejecutar build
+echo "📦 Building project..."
+npm run build
+if [ $? -ne 0 ]; then
+  echo "❌ Build failed. Please fix the errors before committing."
+  exit 1
+fi
+echo "✅ Build passed"
+echo ""
+
+# Ejecutar tests
+echo "🧪 Running tests..."
+npm run test
+if [ $? -ne 0 ]; then
+  echo "❌ Tests failed. Please fix the errors before committing."
+  exit 1
+fi
+echo "✅ Tests passed"
+echo ""
+
+echo "✅ All pre-commit checks passed!"

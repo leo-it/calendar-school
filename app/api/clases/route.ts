@@ -313,6 +313,7 @@ async function notificarUsuariosSubscritos(claseId: string) {
   })
 
   for (const sub of subscriptions) {
+    if (!sub.userId) continue // Saltar si no hay userId
     await prisma.notificacion.create({
       data: {
         userId: sub.userId,

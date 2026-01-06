@@ -463,7 +463,7 @@ export default function ModalSuscriptores({
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">
-                  Email (opcional, puede usar "-")
+                  Email (opcional, puede usar &quot;-&quot;)
                 </label>
                 <input
                   type="email"
@@ -529,7 +529,7 @@ export default function ModalSuscriptores({
                       </p>
                     </div>
                     <button
-                      onClick={() => eliminarSuscriptor(suscriptor.id)}
+                      onClick={() => eliminarSuscriptor(suscriptor.id, suscriptor.userId)}
                       disabled={eliminando === suscriptor.id}
                       className="ml-4 px-3 py-1.5 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
                       title="Eliminar de esta clase"

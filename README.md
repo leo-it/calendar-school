@@ -86,6 +86,35 @@ Una vez instalada:
 - Revisa la consola del navegador por errores
 - Asegúrate de que el Service Worker esté registrado (DevTools → Application → Service Workers)
 
+## 🔧 Pre-commit Hooks
+
+El proyecto está configurado con **Husky** para ejecutar automáticamente verificaciones antes de cada commit:
+
+- ✅ **Build**: Verifica que el proyecto compile correctamente
+- ✅ **Tests**: Ejecuta el linter y verifica que no haya errores
+
+### ¿Qué significa esto?
+
+Cada vez que intentes hacer un `git commit`, se ejecutarán automáticamente:
+1. `npm run build` - Para asegurar que el código compila
+2. `npm run test` - Para ejecutar el linter y tests
+
+Si alguno de estos comandos falla, **el commit será bloqueado** hasta que corrijas los errores.
+
+### Saltar los hooks (solo en casos excepcionales)
+
+Si necesitas hacer un commit sin ejecutar los hooks (no recomendado):
+
+```bash
+git commit --no-verify
+```
+
+⚠️ **Advertencia**: Solo usa `--no-verify` en casos excepcionales. Los hooks están ahí para mantener la calidad del código.
+
+### Configuración
+
+Los hooks se configuran automáticamente al ejecutar `npm install` gracias al script `prepare` en `package.json`.
+
 ## Instalación (Desarrollo Local)
 
 **Nota**: Para desarrollo local, se recomienda usar Docker (ver sección siguiente). Esta instalación requiere PostgreSQL corriendo localmente.

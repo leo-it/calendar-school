@@ -6,6 +6,37 @@ import { prisma } from '@/lib/prisma'
 // Forzar que esta ruta sea dinámica (no pre-renderizada)
 export const dynamic = 'force-dynamic'
 
+// Función helper para normalizar fechas a medianoche UTC
+function normalizarFecha(fecha: string | Date | null): Date | null {
+  if (!fecha) return null
+  
+  let fechaObj: Date
+  if (typeof fecha === 'string') {
+    // Si es string "YYYY-MM-DD", crear fecha en UTC a medianoche
+    if (fecha.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      fechaObj = new Date(fecha + 'T00:00:00.000Z')
+    } else {
+      fechaObj = new Date(fecha)
+    }
+  } else {
+    fechaObj = fecha
+  }
+  
+  if (isNaN(fechaObj.getTime())) {
+    return null
+  }
+  
+  // Normalizar a medianoche UTC
+  const fechaNormalizada = new Date(Date.UTC(
+    fechaObj.getUTCFullYear(),
+    fechaObj.getUTCMonth(),
+    fechaObj.getUTCDate(),
+    0, 0, 0, 0
+  ))
+  
+  return fechaNormalizada
+}
+
 // GET - Obtener todos los suscriptores de una clase
 export async function GET(
   request: NextRequest,
@@ -34,19 +65,13 @@ export async function GET(
       // Intentar parsear la fecha del formato "id-YYYY-MM-DD"
       if (partes.length >= 4) {
         const fechaStr = `${partes[1]}-${partes[2]}-${partes[3]}`
-        fechaClase = new Date(fechaStr)
-        if (isNaN(fechaClase.getTime())) {
-          fechaClase = null
-        }
+        fechaClase = normalizarFecha(fechaStr)
       }
     }
 
-    // Si se proporciona fecha explícitamente, usarla
+    // Si se proporciona fecha explícitamente, usarla y normalizarla
     if (fechaParam) {
-      fechaClase = new Date(fechaParam)
-      if (isNaN(fechaClase.getTime())) {
-        fechaClase = null
-      }
+      fechaClase = normalizarFecha(fechaParam)
     }
 
     // Obtener el usuario completo
@@ -114,7 +139,7 @@ export async function GET(
     
     if (fechaClase) {
       // Cuando hay fecha específica, mostrar:
-      // 1. Suscripciones con esa fecha específica
+      // 1. Suscripciones con esa fecha específica (comparando solo por día, sin hora)
       // 2. Suscripciones con fecha = null (aplican a todas las semanas, incluyendo esta fecha)
       subscriptionsRaw = await prisma.$queryRaw`
         SELECT 
@@ -136,7 +161,10 @@ export async function GET(
         FROM "ClaseSubscription" cs
         LEFT JOIN "User" u ON cs."userId" = u.id
         WHERE cs."claseId" = ${claseId}::text 
-          AND (cs.fecha = ${fechaClase}::timestamp OR cs.fecha IS NULL)
+          AND (
+            (cs.fecha IS NOT NULL AND DATE(cs.fecha) = DATE(${fechaClase}::timestamp))
+            OR cs.fecha IS NULL
+          )
         ORDER BY cs."createdAt" DESC
       `
     } else {

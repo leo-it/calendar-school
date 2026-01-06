@@ -2,9 +2,41 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { logger } from '@/lib/logger'
 
 // Forzar que esta ruta sea dinámica (no pre-renderizada)
 export const dynamic = 'force-dynamic'
+
+// Función helper para normalizar fechas a medianoche UTC
+function normalizarFecha(fecha: string | Date | null): Date | null {
+  if (!fecha) return null
+  
+  let fechaObj: Date
+  if (typeof fecha === 'string') {
+    // Si es string "YYYY-MM-DD", crear fecha en UTC a medianoche
+    if (fecha.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      fechaObj = new Date(fecha + 'T00:00:00.000Z')
+    } else {
+      fechaObj = new Date(fecha)
+    }
+  } else {
+    fechaObj = fecha
+  }
+  
+  if (isNaN(fechaObj.getTime())) {
+    return null
+  }
+  
+  // Normalizar a medianoche UTC
+  const fechaNormalizada = new Date(Date.UTC(
+    fechaObj.getUTCFullYear(),
+    fechaObj.getUTCMonth(),
+    fechaObj.getUTCDate(),
+    0, 0, 0, 0
+  ))
+  
+  return fechaNormalizada
+}
 
 // POST - Añadir manualmente un usuario a una clase
 export async function POST(
@@ -31,10 +63,7 @@ export async function POST(
       // Intentar parsear la fecha del formato "id-YYYY-MM-DD"
       if (partes.length >= 4) {
         const fechaStr = `${partes[1]}-${partes[2]}-${partes[3]}`
-        fechaClase = new Date(fechaStr)
-        if (isNaN(fechaClase.getTime())) {
-          fechaClase = null
-        }
+        fechaClase = normalizarFecha(fechaStr)
       }
     }
 
@@ -46,10 +75,10 @@ export async function POST(
     const emailNormalizado = email && email.trim() !== '' ? email.trim() : null
     const phoneNormalizado = phone && phone.trim() !== '' ? phone.trim() : null
     
-    // Si se proporciona fecha explícitamente, usarla
+    // Si se proporciona fecha explícitamente, usarla y normalizarla
     if (fecha) {
-      fechaClase = new Date(fecha)
-      if (isNaN(fechaClase.getTime())) {
+      fechaClase = normalizarFecha(fecha)
+      if (!fechaClase) {
         return NextResponse.json({ error: 'Fecha inválida' }, { status: 400 })
       }
     }
@@ -127,16 +156,29 @@ export async function POST(
     }
 
     // Verificar capacidad (solo para esta fecha específica si hay fecha)
-    const whereClause: any = { claseId: claseId }
+    // Usar SQL raw para comparar correctamente las fechas por día
+    let count: number
     if (fechaClase) {
-      whereClause.fecha = fechaClase
+      // Contar suscripciones con esta fecha específica O fecha null (aplican a todas las semanas)
+      const result = await prisma.$queryRaw<Array<{ count: bigint }>>`
+        SELECT COUNT(*)::int as count
+        FROM "ClaseSubscription"
+        WHERE "claseId" = ${claseId}::text 
+          AND (
+            ("fecha" IS NOT NULL AND DATE("fecha") = DATE(${fechaClase}::timestamp))
+            OR "fecha" IS NULL
+          )
+      `
+      count = Number(result[0]?.count || 0)
     } else {
-      whereClause.fecha = null
+      // Contar solo suscripciones con fecha null
+      count = await prisma.claseSubscription.count({
+        where: {
+          claseId: claseId,
+          fecha: null,
+        },
+      })
     }
-
-    const count = await prisma.claseSubscription.count({
-      where: whereClause,
-    })
 
     if (count >= clase.capacidad) {
       return NextResponse.json(
@@ -257,7 +299,10 @@ export async function POST(
           WHERE "claseId" = ${claseId}
             AND "nombre" = ${nombreNormalizado}
             AND "apellido" = ${apellidoNormalizado}
-            AND "fecha" = ${fechaClase}
+            AND (
+              (${fechaClase} IS NULL AND "fecha" IS NULL)
+              OR (${fechaClase} IS NOT NULL AND "fecha" IS NOT NULL AND DATE("fecha") = DATE(${fechaClase}::timestamp))
+            )
             AND "dni" = ${dniNormalizado}
             AND "userId" IS NULL
           LIMIT 1
@@ -269,7 +314,10 @@ export async function POST(
           WHERE "claseId" = ${claseId}
             AND "nombre" = ${nombreNormalizado}
             AND "apellido" = ${apellidoNormalizado}
-            AND "fecha" = ${fechaClase}
+            AND (
+              (${fechaClase} IS NULL AND "fecha" IS NULL)
+              OR (${fechaClase} IS NOT NULL AND "fecha" IS NOT NULL AND DATE("fecha") = DATE(${fechaClase}::timestamp))
+            )
             AND "dni" IS NULL
             AND "userId" IS NULL
           LIMIT 1
