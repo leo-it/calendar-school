@@ -44,16 +44,29 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Verificar si el usuario está subscrito (con fecha específica)
-    const subscription = await prisma.claseSubscription.findUnique({
-      where: {
-        userId_claseId_fecha: {
+    // Verificar si el usuario está subscrito
+    // Cuando fecha es null, no podemos usar findUnique con el índice compuesto
+    // Necesitamos usar findFirst con un where condicional
+    let subscription
+    if (fechaClase === null) {
+      subscription = await prisma.claseSubscription.findFirst({
+        where: {
           userId: session.user.id,
           claseId: claseId,
-          fecha: fechaClase as any, // Prisma acepta Date | null pero TypeScript necesita el cast
+          fecha: null,
         },
-      },
-    })
+      })
+    } else {
+      subscription = await prisma.claseSubscription.findUnique({
+        where: {
+          userId_claseId_fecha: {
+            userId: session.user.id,
+            claseId: claseId,
+            fecha: fechaClase,
+          },
+        },
+      })
+    }
 
     return NextResponse.json({ isSubscribed: !!subscription })
   } catch (error) {

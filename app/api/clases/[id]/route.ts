@@ -112,6 +112,7 @@ export async function PUT(
       lugar,
       capacidad,
       profesorId,
+      profesorNombre,
       fechaInicio,
       fechaFin,
       activa,
@@ -134,6 +135,44 @@ export async function PUT(
     const tituloFinal = titulo || claseExistente.titulo
     const estiloFinal = (estilo && estilo.trim() !== '') ? estilo.trim() : tituloFinal.trim()
 
+    // Obtener o crear el profesor si se proporciona profesorNombre
+    let profesorFinalId: string | undefined
+    if (profesorNombre !== undefined && profesorNombre !== null) {
+      const nombreProfesor = profesorNombre.trim()
+      if (nombreProfesor) {
+        // Buscar profesor por nombre (case-insensitive usando toLowerCase)
+        const todosProfesores = await prisma.profesor.findMany()
+        let profesor = todosProfesores.find(
+          (p: { name: string }) => p.name.toLowerCase() === nombreProfesor.toLowerCase()
+        )
+
+        // Si no existe, crearlo
+        if (!profesor) {
+          profesor = await prisma.profesor.create({
+            data: {
+              name: nombreProfesor,
+            }
+          })
+        }
+
+        profesorFinalId = profesor.id
+      }
+    } else if (profesorId !== undefined && profesorId !== null) {
+      // Si se envía profesorId, validar que existe
+      const profesor = await prisma.profesor.findUnique({
+        where: { id: profesorId }
+      })
+
+      if (!profesor) {
+        return NextResponse.json(
+          { error: 'El profesor seleccionado no existe' },
+          { status: 400 }
+        )
+      }
+
+      profesorFinalId = profesorId
+    }
+
     // Preparar datos de actualización (solo incluir campos que se proporcionaron)
     const updateData: any = {}
     
@@ -148,7 +187,7 @@ export async function PUT(
     if (capacidad !== undefined) {
       updateData.capacidad = typeof capacidad === 'number' ? capacidad : (capacidad ? parseInt(String(capacidad)) : 20)
     }
-    if (profesorId !== undefined) updateData.profesorId = profesorId
+    if (profesorFinalId !== undefined) updateData.profesorId = profesorFinalId
     if (fechaInicio !== undefined) updateData.fechaInicio = fechaInicio ? new Date(fechaInicio) : null
     if (fechaFin !== undefined) updateData.fechaFin = fechaFin ? new Date(fechaFin) : null
     if (activa !== undefined) updateData.activa = activa

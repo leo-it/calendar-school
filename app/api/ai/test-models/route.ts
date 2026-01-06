@@ -23,16 +23,15 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Lista de modelos a probar (basados en los disponibles según la API)
+    // Lista de modelos a probar (primero modelos recientes, luego fallbacks)
     const modelosParaProbar = [
-      'gemini-2.5-flash',
-      'gemini-2.5-pro',
-      'gemini-2.0-flash',
-      'gemini-pro-latest',
-      'gemini-flash-latest',
-      'gemini-1.5-pro',
-      'gemini-1.5-flash',
-      'gemini-pro',
+      'gemini-2.5-flash',      // Modelo rápido y eficiente (más reciente)
+      'gemini-2.5-pro',        // Modelo más potente (más reciente)
+      'gemini-2.0-flash',      // Alternativa rápida
+      'gemini-1.5-flash',      // Fallback: modelo rápido y confiable
+      'gemini-1.5-pro',        // Fallback: modelo más potente y confiable
+      'gemini-1.5-flash-002', // Fallback: versión específica de flash
+      'gemini-1.5-pro-002',   // Fallback: versión específica de pro
     ]
 
     const resultados: Array<{ modelo: string; disponible: boolean; error?: string }> = []

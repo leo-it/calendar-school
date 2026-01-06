@@ -2,14 +2,21 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { logger } from '@/lib/logger'
 
 // Forzar que esta ruta sea dinámica (no pre-renderizada)
 export const dynamic = 'force-dynamic'
 
 export async function DELETE(request: NextRequest) {
+  const requestId = crypto.randomUUID()
+  const startTime = Date.now()
+  
   try {
+    logger.info('Iniciando baja de suscripción', { requestId })
+    
     const session = await getServerSession(authOptions)
     if (!session) {
+      logger.warn('Intento de baja sin autorización', { requestId, ip: request.ip })
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     }
 
@@ -43,35 +50,71 @@ export async function DELETE(request: NextRequest) {
       }
     }
 
-    // Verificar que la subscripción existe (con fecha específica)
-    const subscription = await prisma.claseSubscription.findUnique({
-      where: {
-        userId_claseId_fecha: {
-          userId: session.user.id,
-          claseId: claseId,
-          fecha: fechaClase as any, // Prisma acepta Date | null pero TypeScript necesita el cast
-        },
-      },
+    logger.debug('Buscando suscripción para eliminar', { 
+      requestId, 
+      userId: session.user.id, 
+      claseId, 
+      fecha: fechaClase?.toISOString() || null 
     })
 
+    // Verificar que la subscripción existe
+    // Cuando fecha es null, no podemos usar findUnique con el índice compuesto
+    // Necesitamos usar findFirst con un where condicional
+    let subscription
+    if (fechaClase === null) {
+      subscription = await prisma.claseSubscription.findFirst({
+        where: {
+          userId: session.user.id,
+          claseId: claseId,
+          fecha: null,
+        },
+      })
+    } else {
+      subscription = await prisma.claseSubscription.findUnique({
+        where: {
+          userId_claseId_fecha: {
+            userId: session.user.id,
+            claseId: claseId,
+            fecha: fechaClase,
+          },
+        },
+      })
+    }
+
     if (!subscription) {
+      logger.warn('Intento de baja de suscripción inexistente', { 
+        requestId, 
+        userId: session.user.id, 
+        claseId, 
+        fecha: fechaClase?.toISOString() || null 
+      })
       return NextResponse.json({ error: 'No estás subscrito a esta clase' }, { status: 404 })
     }
 
-    // Eliminar subscripción
+    // Eliminar subscripción usando el ID directamente
     await prisma.claseSubscription.delete({
       where: {
-        userId_claseId_fecha: {
-          userId: session.user.id,
-          claseId: claseId,
-          fecha: fechaClase as any, // Prisma acepta Date | null pero TypeScript necesita el cast
-        },
+        id: subscription.id,
       },
+    })
+
+    logger.info('Suscripción eliminada exitosamente', { 
+      requestId, 
+      userId: session.user.id, 
+      claseId, 
+      subscriptionId: subscription.id,
+      fecha: fechaClase?.toISOString() || null,
+      duration: Date.now() - startTime
     })
 
     return NextResponse.json({ message: 'Te has dado de baja correctamente' })
   } catch (error: any) {
-    console.error('Error al darse de baja de clase:', error)
+    logger.error('Error al darse de baja de clase', error, { 
+      requestId, 
+      userId: (await getServerSession(authOptions))?.user?.id,
+      duration: Date.now() - startTime,
+      stack: error.stack
+    })
     
     if (error.message?.includes('fecha') || error.message?.includes('ClaseSubscription.fecha')) {
       return NextResponse.json(

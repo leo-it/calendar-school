@@ -651,15 +651,15 @@ IMPORTANTE:
     systemPrompt = truncateContext(systemPrompt)
 
     // Intentar con diferentes modelos en orden de preferencia
-    // Usar los modelos que realmente están disponibles según la API
+    // Primero intentar modelos más recientes, luego fallback a modelos confirmados
     const modelos = [
-      'gemini-2.5-flash',      // Modelo rápido y eficiente
-      'gemini-2.5-pro',        // Modelo más potente
+      'gemini-2.5-flash',      // Modelo rápido y eficiente (más reciente)
+      'gemini-2.5-pro',        // Modelo más potente (más reciente)
       'gemini-2.0-flash',      // Alternativa rápida
-      'gemini-pro-latest',     // Última versión de gemini-pro
-      'gemini-flash-latest',   // Última versión de flash
-      'gemini-1.5-pro',        // Fallback
-      'gemini-pro',            // Fallback básico
+      'gemini-1.5-flash',      // Fallback: modelo rápido y confiable
+      'gemini-1.5-pro',        // Fallback: modelo más potente y confiable
+      'gemini-1.5-flash-002', // Fallback: versión específica de flash
+      'gemini-1.5-pro-002',   // Fallback: versión específica de pro
     ]
     let text: string | null = null
     let ultimoError: any = null

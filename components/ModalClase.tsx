@@ -424,7 +424,10 @@ export default function ModalClase({
 
       if (response.ok) {
         setEstaSubscrito(true)
-        cargarInscripciones() // Actualizar conteo de inscripciones
+        // Esperar un momento para que la BD se actualice antes de recargar
+        setTimeout(() => {
+          cargarInscripciones() // Actualizar conteo de inscripciones
+        }, 100)
         onActualizada()
       } else {
         const errorData = await response.json()
@@ -461,17 +464,40 @@ export default function ModalClase({
     if (!clase) return
     setDesubscribiendo(true)
     try {
-      // Extraer el ID real de la clase (puede ser compuesto como "id-fecha")
-      const claseIdReal = clase.id.includes('-') ? clase.id.split('-')[0] : clase.id
+      // Extraer el ID real de la clase y la fecha (puede ser compuesto como "id-fecha")
+      let claseIdReal = clase.id
+      let fechaClase: string | null = null
+      
+      if (clase.id.includes('-')) {
+        const partes = clase.id.split('-')
+        claseIdReal = partes[0]
+        // Intentar extraer la fecha del formato "id-YYYY-MM-DD"
+        if (partes.length >= 4) {
+          fechaClase = `${partes[1]}-${partes[2]}-${partes[3]}`
+        }
+      }
+      
+      // Si la clase tiene fecha directamente, usarla
+      if (clase.fecha && !fechaClase) {
+        const fecha = typeof clase.fecha === 'string' ? new Date(clase.fecha) : clase.fecha
+        fechaClase = fecha.toISOString().split('T')[0]
+      }
+      
       const response = await fetch('/api/clases/unsubscribe', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ claseId: claseIdReal }),
+        body: JSON.stringify({ 
+          claseId: claseIdReal,
+          fecha: fechaClase 
+        }),
       })
 
       if (response.ok) {
         setEstaSubscrito(false)
-        cargarInscripciones() // Actualizar conteo de inscripciones
+        // Esperar un momento para que la BD se actualice antes de recargar
+        setTimeout(() => {
+          cargarInscripciones() // Actualizar conteo de inscripciones
+        }, 100)
         onActualizada()
       } else {
         const errorData = await response.json()

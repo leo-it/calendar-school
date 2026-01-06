@@ -116,17 +116,26 @@ export default function EditarClaseClient({
         return
       }
 
+      // Si no hay profesorId pero hay nombre de profesor, enviar profesorNombre
+      const bodyData: any = {
+        ...formData,
+        lugar: formData.lugar,
+        fechaInicio: formData.fechaInicio || null,
+        fechaFin: formData.fechaFin || null,
+      }
+
+      // Si no hay profesorId pero hay nombre de profesor escrito, enviar profesorNombre
+      if (!formData.profesorId && profesorBuscado.trim()) {
+        bodyData.profesorNombre = profesorBuscado.trim()
+        delete bodyData.profesorId
+      }
+
       const response = await fetch(`/api/clases/${claseId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          ...formData,
-          lugar: formData.lugar,
-          fechaInicio: formData.fechaInicio || null,
-          fechaFin: formData.fechaFin || null,
-        }),
+        body: JSON.stringify(bodyData),
       })
 
       if (!response.ok) {
