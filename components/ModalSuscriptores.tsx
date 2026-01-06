@@ -1,6 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Modal from './Modal'
+import { useModal } from './useModal'
 
 interface Suscriptor {
   id: string
@@ -54,6 +56,7 @@ export default function ModalSuscriptores({
   })
   const [creandoNuevo, setCreandoNuevo] = useState(false)
   const [eliminando, setEliminando] = useState<string | null>(null)
+  const { modal, showModal, showConfirm, closeModal } = useModal()
 
   useEffect(() => {
     cargarSuscriptores()
@@ -156,11 +159,11 @@ export default function ModalSuscriptores({
         body: JSON.stringify(body),
       })
 
-      if (!response.ok) {
-        const data = await response.json()
-        alert(data.error || 'Error al añadir usuario')
-        return
-      }
+          if (!response.ok) {
+            const data = await response.json()
+            showModal(data.error || 'Error al añadir usuario', 'error')
+            return
+          }
 
       // Recargar suscriptores
       await cargarSuscriptores()
@@ -169,17 +172,17 @@ export default function ModalSuscriptores({
       
       if (onActualizada) {
         onActualizada()
-      }
-    } catch (err) {
-      alert('Error al añadir usuario')
-    } finally {
+        }
+      } catch (err) {
+        showModal('Error al añadir usuario', 'error')
+      } finally {
       setAñadiendo(null)
     }
   }
 
   const inscribirNuevoAlumno = async () => {
     if (!formularioNuevo.nombre || !formularioNuevo.apellido) {
-      alert('El nombre y apellido son requeridos')
+      showModal('El nombre y apellido son requeridos', 'warning')
       return
     }
 
@@ -211,11 +214,11 @@ export default function ModalSuscriptores({
         }),
       })
 
-      if (!response.ok) {
-        const data = await response.json()
-        alert(data.error || 'Error al inscribir alumno')
-        return
-      }
+          if (!response.ok) {
+            const data = await response.json()
+            showModal(data.error || 'Error al inscribir alumno', 'error')
+            return
+          }
 
       // Recargar suscriptores
       await cargarSuscriptores()
@@ -224,19 +227,26 @@ export default function ModalSuscriptores({
       
       if (onActualizada) {
         onActualizada()
-      }
-    } catch (err) {
-      alert('Error al inscribir alumno')
-    } finally {
+        }
+      } catch (err) {
+        showModal('Error al inscribir alumno', 'error')
+      } finally {
       setCreandoNuevo(false)
     }
   }
 
   const eliminarSuscriptor = async (subscriptionId: string, userId: string | null) => {
-    if (!confirm('¿Estás seguro de que quieres eliminar a este alumno de la clase?')) {
-      return
-    }
+    showConfirm(
+      '¿Estás seguro de que quieres eliminar a este alumno de la clase?',
+      () => {
+        ejecutarEliminacion(subscriptionId, userId)
+      },
+      'warning',
+      'Confirmar eliminación'
+    )
+  }
 
+  const ejecutarEliminacion = async (subscriptionId: string, userId: string | null) => {
     setEliminando(subscriptionId)
     try {
       const idReal = claseId.includes('-') ? claseId.split('-')[0] : claseId
@@ -262,16 +272,17 @@ export default function ModalSuscriptores({
 
       if (!response.ok) {
         const data = await response.json()
-        alert(data.error || 'Error al eliminar suscriptor')
+        showModal(data.error || 'Error al eliminar suscriptor', 'error')
         return
       }
 
       await cargarSuscriptores()
+      showModal('Alumno eliminado correctamente', 'success')
       if (onActualizada) {
         onActualizada()
       }
     } catch (err) {
-      alert('Error al eliminar suscriptor')
+      showModal('Error al eliminar suscriptor', 'error')
     } finally {
       setEliminando(null)
     }
@@ -536,6 +547,18 @@ export default function ModalSuscriptores({
           )}
         </div>
       </div>
+
+      {/* Modal de notificaciones */}
+      <Modal
+        isOpen={modal.isOpen}
+        onClose={closeModal}
+        message={modal.message}
+        type={modal.type}
+        title={modal.title}
+        showConfirm={modal.showConfirm}
+        confirmText={modal.confirmText}
+        onConfirm={modal.onConfirm}
+      />
     </div>
   )
 }

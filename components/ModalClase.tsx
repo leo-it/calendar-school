@@ -6,6 +6,8 @@ import { es } from 'date-fns/locale/es'
 import { Clase, Profesor } from '@prisma/client'
 import { Nivel, Estilo } from '@/types/enums'
 import { generarUrlGoogleCalendar } from '@/lib/google-calendar'
+import Modal from './Modal'
+import { useModal } from './useModal'
 
 interface ClaseConProfesor extends Clase {
   profesor: Profesor
@@ -63,6 +65,7 @@ export default function ModalClase({
     phone: '',
   })
   const [creandoNuevo, setCreandoNuevo] = useState(false)
+  const { modal, showModal, showConfirm, closeModal } = useModal()
 
   const puedeEditar = usuarioRole === 'ADMIN' || (usuarioRole === 'PROFESOR' && esAdminEscuela)
   const esProfesor = usuarioRole === 'PROFESOR'
@@ -181,7 +184,7 @@ export default function ModalClase({
 
       if (!response.ok) {
         const data = await response.json()
-        alert(data.error || 'Error al añadir usuario')
+        showModal(data.error || 'Error al añadir usuario', 'error')
         return
       }
 
@@ -191,7 +194,7 @@ export default function ModalClase({
       setUsuariosEncontrados([])
       onActualizada()
     } catch (err) {
-      alert('Error al añadir usuario')
+        showModal('Error al añadir usuario', 'error')
     } finally {
       setAñadiendo(null)
     }
@@ -199,7 +202,7 @@ export default function ModalClase({
 
   const inscribirNuevoAlumno = async () => {
     if (!clase || !formularioNuevo.nombre || !formularioNuevo.apellido) {
-      alert('El nombre y apellido son requeridos')
+      showModal('El nombre y apellido son requeridos', 'warning')
       return
     }
 
@@ -238,7 +241,7 @@ export default function ModalClase({
 
       if (!response.ok) {
         const data = await response.json()
-        alert(data.error || 'Error al inscribir alumno')
+        showModal(data.error || 'Error al inscribir alumno', 'error')
         return
       }
 
@@ -248,17 +251,24 @@ export default function ModalClase({
       setModoInscripcion('buscar')
       onActualizada()
     } catch (err) {
-      alert('Error al inscribir alumno')
+        showModal('Error al inscribir alumno', 'error')
     } finally {
       setCreandoNuevo(false)
     }
   }
 
   const eliminarSuscriptor = async (subscriptionId: string, userId: string | null) => {
-    if (!confirm('¿Estás seguro de que quieres eliminar a este alumno de la clase?')) {
-      return
-    }
+    showConfirm(
+      '¿Estás seguro de que quieres eliminar a este alumno de la clase?',
+      () => {
+        ejecutarEliminacionSuscriptor(subscriptionId, userId)
+      },
+      'warning',
+      'Confirmar eliminación'
+    )
+  }
 
+  const ejecutarEliminacionSuscriptor = async (subscriptionId: string, userId: string | null) => {
     setEliminandoSuscriptor(subscriptionId)
     try {
       let claseIdReal = clase?.id
@@ -291,17 +301,18 @@ export default function ModalClase({
 
       if (!response.ok) {
         const data = await response.json()
-        alert(data.error || 'Error al eliminar suscriptor')
+        showModal(data.error || 'Error al eliminar suscriptor', 'error')
         return
       }
 
       await cargarAlumnos()
       await cargarInscripciones()
+      showModal('Alumno eliminado correctamente', 'success')
       if (onActualizada) {
         onActualizada()
       }
     } catch (err) {
-      alert('Error al eliminar suscriptor')
+      showModal('Error al eliminar suscriptor', 'error')
     } finally {
       setEliminandoSuscriptor(null)
     }
@@ -424,11 +435,11 @@ export default function ModalClase({
           errorMessage = `${errorMessage}\n\n${errorData.details}`
         }
         
-        alert(errorMessage)
+        showModal(errorMessage, 'error')
       }
     } catch (error) {
       console.error('Error al subscribirse:', error)
-      alert('Error al subscribirse')
+      showModal('Error al subscribirse', 'error')
     } finally {
       setSubscribiendo(false)
     }
@@ -436,10 +447,17 @@ export default function ModalClase({
 
   const handleUnsubscribe = async () => {
     if (!clase) return
-    if (!confirm('¿Estás seguro de que quieres darte de baja de esta clase?')) {
-      return
-    }
+    showConfirm(
+      '¿Estás seguro de que quieres darte de baja de esta clase?',
+      () => {
+        ejecutarDesuscripcion()
+      },
+      'warning',
+      'Confirmar baja'
+    )
+  }
 
+  const ejecutarDesuscripcion = async () => {
     setDesubscribiendo(true)
     try {
       // Extraer el ID real de la clase (puede ser compuesto como "id-fecha")
@@ -463,11 +481,11 @@ export default function ModalClase({
           errorMessage = `${errorMessage}\n\n${errorData.details}`
         }
         
-        alert(errorMessage)
+        showModal(errorMessage, 'error')
       }
     } catch (error) {
       console.error('Error al darse de baja:', error)
-      alert('Error al darse de baja')
+      showModal('Error al darse de baja', 'error')
     } finally {
       setDesubscribiendo(false)
     }
@@ -475,10 +493,18 @@ export default function ModalClase({
 
   const handleDelete = async () => {
     if (!clase) return
-    if (!confirm('¿Estás seguro de que quieres eliminar esta clase? Esto eliminará todas las ocurrencias recurrentes.')) {
-      return
-    }
+    showConfirm(
+      '¿Estás seguro de que quieres eliminar esta clase? Esto eliminará todas las ocurrencias recurrentes.',
+      () => {
+        ejecutarEliminacionClase()
+      },
+      'warning',
+      'Confirmar eliminación',
+      'Eliminar'
+    )
+  }
 
+  const ejecutarEliminacionClase = async () => {
     setEliminando(true)
     try {
       const response = await fetch(`/api/clases/${claseIdReal}`, {
@@ -486,15 +512,18 @@ export default function ModalClase({
       })
 
       if (response.ok) {
-        onActualizada()
-        onClose()
+        showModal('Clase eliminada correctamente', 'success')
+        setTimeout(() => {
+          onActualizada()
+          onClose()
+        }, 1500)
       } else {
         const error = await response.json()
-        alert(error.error || 'Error al eliminar la clase')
+        showModal(error.error || 'Error al eliminar la clase', 'error')
       }
     } catch (error) {
       console.error('Error al eliminar clase:', error)
-      alert('Error al eliminar la clase')
+      showModal('Error al eliminar la clase', 'error')
     } finally {
       setEliminando(false)
     }
@@ -916,6 +945,18 @@ export default function ModalClase({
           </div>
         </div>
       </div>
+
+      {/* Modal de notificaciones */}
+      <Modal
+        isOpen={modal.isOpen}
+        onClose={closeModal}
+        message={modal.message}
+        type={modal.type}
+        title={modal.title}
+        showConfirm={modal.showConfirm}
+        confirmText={modal.confirmText}
+        onConfirm={modal.onConfirm}
+      />
     </div>
   )
 }

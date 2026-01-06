@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import AppHeader from '@/components/AppHeader'
+import Modal from '@/components/Modal'
+import { useModal } from '@/components/useModal'
 
 interface Clase {
   id: string
@@ -43,6 +45,7 @@ export default function ProfesorDashboardClient({ user }: { user: { id: string; 
     whatsapp: '',
     web: '',
   })
+  const { modal, showModal, closeModal } = useModal()
 
   useEffect(() => {
     cargarClases()
@@ -87,13 +90,13 @@ export default function ProfesorDashboardClient({ user }: { user: { id: string; 
       if (response.ok) {
         await cargarInfoEscuela()
         setEditandoInfo(false)
-        alert('Información de contacto actualizada correctamente')
+        showModal('Información de contacto actualizada correctamente', 'success')
       } else {
         const data = await response.json()
-        alert(data.error || 'Error al actualizar información')
+        showModal(data.error || 'Error al actualizar información', 'error')
       }
     } catch (err) {
-      alert('Error al guardar información')
+      showModal('Error al guardar información', 'error')
     } finally {
       setGuardandoInfo(false)
     }
@@ -381,6 +384,15 @@ export default function ProfesorDashboardClient({ user }: { user: { id: string; 
           </div>
         )}
       </div>
+
+      {/* Modal de notificaciones */}
+      <Modal
+        isOpen={modal.isOpen}
+        onClose={closeModal}
+        message={modal.message}
+        type={modal.type}
+        title={modal.title}
+      />
     </div>
   )
 }
