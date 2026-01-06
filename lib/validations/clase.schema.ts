@@ -41,10 +41,10 @@ const baseClaseSchema = z.object({
     .optional()
     .nullable(),
   lugar: z.string()
-    .min(1, 'El lugar es requerido')
     .max(200, 'El lugar es demasiado largo')
     .transform(sanitizeString)
-    .refine((val) => val !== null, { message: 'El lugar es requerido' }),
+    .optional()
+    .nullable(),
   capacidad: z.union([
     z.string().transform((val) => sanitizeNumber(val) ?? 20),
     z.number().transform((val) => sanitizeNumber(val) ?? 20)

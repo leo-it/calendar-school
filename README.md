@@ -115,6 +115,86 @@ git commit --no-verify
 
 Los hooks se configuran automáticamente al ejecutar `npm install` gracias al script `prepare` en `package.json`.
 
+## 📊 Sistema de Logging Estructurado
+
+El proyecto incluye un sistema de logging estructurado en formato JSON, diseñado para ser compatible con **Kibana/ELK Stack**.
+
+### Características
+
+- ✅ **Logs en formato JSON** - Fácil de parsear y analizar
+- ✅ **Metadatos estructurados** - Cada log incluye contexto relevante (userId, requestId, etc.)
+- ✅ **Niveles de log** - debug, info, warn, error
+- ✅ **Logs específicos** - API requests, autenticación, operaciones de negocio, seguridad
+
+### Ubicación
+
+El logger está en `lib/logger.ts` y se usa en las rutas de API para registrar:
+
+- **Operaciones de API**: Método, path, status code, duración
+- **Autenticación**: Acciones de login, logout, registro
+- **Operaciones de negocio**: Inscripciones, creación de clases, etc.
+- **Eventos de seguridad**: Intentos maliciosos, rate limiting, etc.
+- **Operaciones de base de datos**: Queries importantes (opcional, solo en debug)
+
+### Ejemplo de Log
+
+```json
+{
+  "timestamp": "2024-01-15T10:30:45.123Z",
+  "level": "info",
+  "message": "Alumno inscrito manualmente",
+  "service": "almanaque",
+  "context": {
+    "type": "business",
+    "action": "inscribir_alumno",
+    "entity": "ClaseSubscription",
+    "entityId": "clxxx123",
+    "userId": "user_abc",
+    "claseId": "clase_xyz",
+    "fechaClase": "2024-01-20T00:00:00.000Z",
+    "duration": 145
+  }
+}
+```
+
+### Configuración para Kibana
+
+Los logs están listos para ser ingeridos por **Logstash** o directamente por **Kibana**:
+
+1. **En desarrollo**: Los logs se muestran formateados en la consola
+2. **En producción**: Los logs se generan en formato JSON compacto
+
+### Configuración de Logstash (Opcional)
+
+Si usas Logstash, puedes configurar un pipeline como:
+
+```ruby
+input {
+  # Configurar según tu entorno (file, beats, etc.)
+}
+
+filter {
+  json {
+    source => "message"
+  }
+  
+  date {
+    match => [ "timestamp", "ISO8601" ]
+  }
+}
+
+output {
+  elasticsearch {
+    hosts => ["localhost:9200"]
+    index => "almanaque-logs-%{+YYYY.MM.dd}"
+  }
+}
+```
+
+### Variables de Entorno
+
+- `LOG_LEVEL`: Nivel de logging (debug, info, warn, error). Por defecto: `info` en producción, `debug` en desarrollo
+
 ## Instalación (Desarrollo Local)
 
 **Nota**: Para desarrollo local, se recomienda usar Docker (ver sección siguiente). Esta instalación requiere PostgreSQL corriendo localmente.

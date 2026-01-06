@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { createClaseSchema } from '@/lib/validations'
+import { logger } from '@/lib/logger'
 
 // Forzar que esta ruta sea dinámica (no pre-renderizada)
 export const dynamic = 'force-dynamic'
@@ -139,9 +140,15 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const requestId = crypto.randomUUID()
+  const startTime = Date.now()
+  
   try {
+    logger.info('Iniciando creación de clase', { requestId, action: 'create_clase_start' })
+    
     const session = await getServerSession(authOptions)
     if (!session || session.user.role !== 'ADMIN' && session.user.role !== 'PROFESOR') {
+      logger.warn('Intento de crear clase sin autorización', { requestId, userId: session?.user?.id, role: session?.user?.role })
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     }
 
@@ -156,10 +163,12 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
+    logger.debug('Datos recibidos para crear clase', { requestId, body: { ...body, profesorNombre: body.profesorNombre?.substring(0, 50) } })
     
     // Validar con Zod
     const validationResult = createClaseSchema.safeParse(body)
     if (!validationResult.success) {
+      logger.warn('Error de validación al crear clase', { requestId, validationErrors: validationResult.error.errors })
       return NextResponse.json(
         { 
           error: 'Datos inválidos',
@@ -207,11 +216,14 @@ export async function POST(request: NextRequest) {
     })
 
     if (!escuela) {
+      logger.warn('Intento de crear clase con escuela inexistente', { requestId, escuelaId: finalEscuelaId })
       return NextResponse.json(
         { error: 'La escuela especificada no existe' },
         { status: 400 }
       )
     }
+    
+    logger.debug('Escuela validada', { requestId, escuelaId: finalEscuelaId, escuelaNombre: escuela.nombre })
 
     // diaSemana ya está validado y convertido por Zod
     const diaSemanaNum = diaSemana
@@ -263,6 +275,14 @@ export async function POST(request: NextRequest) {
     // Usar el lugar proporcionado o el nombre de la escuela como fallback
     const lugarFinal = lugar || escuela.nombre
 
+    logger.debug('Intentando crear clase en BD', { 
+      requestId, 
+      titulo, 
+      diaSemana: diaSemanaNum, 
+      profesorId: profesorFinalId,
+      escuelaId: finalEscuelaId 
+    })
+
     const clase = await prisma.clase.create({
       data: {
         titulo,
@@ -285,12 +305,35 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    // Notificar a los usuarios subscritos
-    await notificarUsuariosSubscritos(clase.id)
+    logger.info('Clase creada exitosamente', { 
+      requestId, 
+      claseId: clase.id, 
+      titulo: clase.titulo,
+      profesorId: clase.profesorId,
+      escuelaId: clase.escuelaId 
+    })
+
+    // Notificar a los usuarios subscritos (no crítico si falla)
+    try {
+      await notificarUsuariosSubscritos(clase.id)
+    } catch (notifError: any) {
+      logger.warn('Error al notificar usuarios (no crítico)', { requestId, claseId: clase.id, error: notifError.message })
+    }
+
+    logger.info('Creación de clase completada', { 
+      requestId, 
+      duration: Date.now() - startTime,
+      claseId: clase.id 
+    })
 
     return NextResponse.json(clase, { status: 201 })
   } catch (error: any) {
-    console.error('Error al crear clase:', error)
+    logger.error('Error al crear clase', error, { 
+      requestId, 
+      stack: error.stack,
+      duration: Date.now() - startTime
+    })
+    
     return NextResponse.json(
       { 
         error: 'Error al crear clase',

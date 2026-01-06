@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { logger } from '@/lib/logger'
 
 // Forzar que esta ruta sea dinámica (no pre-renderizada)
 export const dynamic = 'force-dynamic'
@@ -42,9 +43,16 @@ export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+  const startTime = Date.now()
+  
   try {
     const session = await getServerSession(authOptions)
     if (!session) {
+      logger.security('Intento de consultar suscriptores sin autenticación', 'medium', {
+        requestId,
+        path: request.url,
+      })
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     }
 
@@ -141,6 +149,51 @@ export async function GET(
       // Cuando hay fecha específica, mostrar:
       // 1. Suscripciones con esa fecha específica (comparando solo por día, sin hora)
       // 2. Suscripciones con fecha = null (aplican a todas las semanas, incluyendo esta fecha)
+      
+      logger.debug('Consultando suscriptores con fecha específica', {
+        requestId,
+        claseId,
+        fechaClase: fechaClase.toISOString(),
+        fechaClaseDate: fechaClase.toISOString().split('T')[0],
+      })
+      
+      // Primero, hacer una consulta de depuración para ver qué fechas hay en la BD
+      const debugQuery = await prisma.$queryRaw<Array<{
+        id: string
+        fecha: Date | null
+        nombre: string | null
+        fecha_str: string | null
+        fecha_date: string | null
+      }>>`
+        SELECT 
+          id,
+          fecha,
+          nombre,
+          fecha::text as fecha_str,
+          DATE(fecha)::text as fecha_date
+        FROM "ClaseSubscription"
+        WHERE "claseId" = ${claseId}::text
+        ORDER BY "createdAt" DESC
+        LIMIT 10
+      `
+      
+      logger.debug('Fechas encontradas en BD para depuración', {
+        requestId,
+        claseId,
+        registros: debugQuery.map(r => ({
+          id: r.id,
+          nombre: r.nombre,
+          fecha: r.fecha?.toISOString() || null,
+          fecha_str: r.fecha_str,
+          fecha_date: r.fecha_date,
+        })),
+        fechaBuscada: fechaClase.toISOString(),
+        fechaBuscadaDate: fechaClase.toISOString().split('T')[0],
+      })
+      
+      // Usar una comparación más explícita: extraer solo la parte de fecha
+      const fechaBuscadaStr = fechaClase.toISOString().split('T')[0] // "2026-01-10"
+      
       subscriptionsRaw = await prisma.$queryRaw`
         SELECT 
           cs.id,
@@ -162,11 +215,20 @@ export async function GET(
         LEFT JOIN "User" u ON cs."userId" = u.id
         WHERE cs."claseId" = ${claseId}::text 
           AND (
-            (cs.fecha IS NOT NULL AND DATE(cs.fecha) = DATE(${fechaClase}::timestamp))
+            (cs.fecha IS NOT NULL AND DATE(cs.fecha)::text = ${fechaBuscadaStr}::text)
             OR cs.fecha IS NULL
           )
         ORDER BY cs."createdAt" DESC
       `
+      
+      logger.debug('Resultados de consulta de suscriptores', {
+        requestId,
+        claseId,
+        fechaClase: fechaClase.toISOString(),
+        totalEncontrados: subscriptionsRaw.length,
+        fechasEncontradas: subscriptionsRaw.map(s => s.fecha?.toISOString() || 'null'),
+        nombresEncontrados: subscriptionsRaw.map(s => s.nombre || s.user_name || 'N/A'),
+      })
     } else {
       // Cuando no hay fecha específica, mostrar solo suscripciones con fecha = null
       subscriptionsRaw = await prisma.$queryRaw`
@@ -204,6 +266,19 @@ export async function GET(
       phone: sub.userId ? (sub.user_phone || null) : (sub.phone || null),
       fechaInscripcion: sub.createdAt,
     }))
+
+    const duration = Date.now() - startTime
+    
+    logger.api('GET', `/api/clases/${claseId}/subscriptions`, 200, duration, {
+      requestId,
+      userId: session.user.id,
+      userRole: session.user.role,
+      claseId,
+      fechaClase: fechaClase?.toISOString() || null,
+      totalSuscriptores: suscriptores.length,
+      suscriptoresConUsuario: suscriptores.filter(s => s.userId).length,
+      suscriptoresManuales: suscriptores.filter(s => !s.userId).length,
+    })
 
     return NextResponse.json({
       clase: {

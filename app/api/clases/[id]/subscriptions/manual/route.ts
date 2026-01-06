@@ -43,11 +43,25 @@ export async function POST(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+  const startTime = Date.now()
+  
   try {
     const session = await getServerSession(authOptions)
     if (!session) {
+      logger.security('Intento de inscripción sin autenticación', 'medium', {
+        requestId,
+        path: request.url,
+      })
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     }
+    
+    logger.info('Iniciando inscripción manual de alumno', {
+      requestId,
+      userId: session.user.id,
+      userRole: session.user.role,
+      claseId: params.id,
+    })
 
     // Solo PROFESOR, ADMIN o ADMIN de escuela pueden añadir suscriptores manualmente
     if (session.user.role !== 'PROFESOR' && session.user.role !== 'ADMIN') {
@@ -346,10 +360,29 @@ export async function POST(
       
       // Intentar crear usando create, pero si falla, usar SQL raw
       try {
+        logger.debug('Intentando crear inscripción con Prisma', {
+          requestId,
+          claseId,
+          fechaClase: fechaClase?.toISOString() || null,
+          nombre: nombreNormalizado,
+          apellido: apellidoNormalizado,
+        })
+        
         subscription = await prisma.claseSubscription.create({
           data: dataToCreate,
         })
+        
+        logger.debug('Inscripción creada exitosamente con Prisma', {
+          requestId,
+          subscriptionId: subscription.id,
+          fecha: (subscription as any).fecha?.toISOString() || null,
+        })
       } catch (createError: any) {
+        logger.warn('Error al crear con Prisma, intentando SQL raw', {
+          requestId,
+          error: createError.message,
+          claseId,
+        })
         // Si Prisma requiere la relación user, usar SQL raw
         if (createError.message?.includes('user') || createError.message?.includes('Argument')) {
           // Generar un ID similar a CUID (25 caracteres, empezando con 'c')
@@ -365,32 +398,72 @@ export async function POST(
           const newId = generateId()
           
           // Usar SQL raw para insertar directamente con ID generado
-          await prisma.$executeRaw`
-            INSERT INTO "ClaseSubscription" (
-              "id",
-              "userId",
-              "claseId",
-              "fecha",
-              "nombre",
-              "apellido",
-              "dni",
-              "email",
-              "phone",
-              "createdAt"
-            )
-            VALUES (
-              ${newId}::text,
-              NULL,
-              ${claseId}::text,
-              ${fechaClase}::timestamp,
-              ${nombreNormalizado}::text,
-              ${apellidoNormalizado}::text,
-              ${dniNormalizado}::text,
-              ${emailFinal}::text,
-              ${phoneNormalizado}::text,
-              NOW()
-            )
-          `
+          // Usar el objeto Date directamente en Prisma, que lo convertirá correctamente
+          logger.debug('Insertando inscripción manual con SQL raw', {
+            requestId,
+            newId,
+            claseId,
+            fechaClase: fechaClase?.toISOString() || null,
+            nombre: nombreNormalizado,
+            apellido: apellidoNormalizado,
+          })
+          
+          // Usar Prisma.$executeRaw con el objeto Date directamente
+          if (fechaClase) {
+            await prisma.$executeRaw`
+              INSERT INTO "ClaseSubscription" (
+                "id",
+                "userId",
+                "claseId",
+                "fecha",
+                "nombre",
+                "apellido",
+                "dni",
+                "email",
+                "phone",
+                "createdAt"
+              )
+              VALUES (
+                ${newId}::text,
+                NULL,
+                ${claseId}::text,
+                ${fechaClase}::timestamp,
+                ${nombreNormalizado}::text,
+                ${apellidoNormalizado}::text,
+                ${dniNormalizado}::text,
+                ${emailFinal}::text,
+                ${phoneNormalizado}::text,
+                NOW()
+              )
+            `
+          } else {
+            await prisma.$executeRaw`
+              INSERT INTO "ClaseSubscription" (
+                "id",
+                "userId",
+                "claseId",
+                "fecha",
+                "nombre",
+                "apellido",
+                "dni",
+                "email",
+                "phone",
+                "createdAt"
+              )
+              VALUES (
+                ${newId}::text,
+                NULL,
+                ${claseId}::text,
+                NULL,
+                ${nombreNormalizado}::text,
+                ${apellidoNormalizado}::text,
+                ${dniNormalizado}::text,
+                ${emailFinal}::text,
+                ${phoneNormalizado}::text,
+                NOW()
+              )
+            `
+          }
           
           // Obtener el registro recién creado usando SQL raw para evitar problemas con tipos
           const result = await prisma.$queryRaw<Array<{
@@ -424,6 +497,15 @@ export async function POST(
             throw new Error('Error al crear la inscripción')
           }
           
+          logger.debug('Inscripción creada con SQL raw, fecha guardada', {
+            requestId,
+            subscriptionId: result[0].id,
+            fechaGuardada: result[0].fecha?.toISOString() || null,
+            fechaEsperada: fechaClase?.toISOString() || null,
+            nombre: result[0].nombre,
+            apellido: result[0].apellido,
+          })
+          
           // Construir el objeto subscription desde el resultado SQL
           subscription = {
             id: result[0].id,
@@ -442,6 +524,17 @@ export async function POST(
         }
       }
 
+      const duration = Date.now() - startTime
+      
+      logger.business('Alumno inscrito manualmente', 'ClaseSubscription', subscription.id, session.user.id, {
+        requestId,
+        claseId,
+        fechaClase: fechaClase?.toISOString() || null,
+        nombre: nombreNormalizado,
+        apellido: apellidoNormalizado,
+        duration,
+      })
+      
       return NextResponse.json({
         message: 'Alumno añadido correctamente',
         subscription: {
