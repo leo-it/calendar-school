@@ -43,15 +43,31 @@ export async function GET(
       }
     }
 
-    // Contar las subscripciones de la clase (solo para esta fecha específica si hay fecha)
-    const whereClause: any = { 
-      claseId: claseId,
-      fecha: fechaClase || null
+    // Contar las subscripciones de la clase
+    // Si hay fecha específica, contar tanto las suscripciones con esa fecha como las con fecha = null
+    // Si no hay fecha, contar solo las suscripciones con fecha = null
+    let count: number
+    
+    if (fechaClase) {
+      // Cuando hay fecha específica, contar:
+      // 1. Suscripciones con esa fecha específica
+      // 2. Suscripciones con fecha = null (aplican a todas las semanas, incluyendo esta fecha)
+      const result = await prisma.$queryRaw<Array<{ count: bigint }>>`
+        SELECT COUNT(*)::int as count
+        FROM "ClaseSubscription"
+        WHERE "claseId" = ${claseId}::text 
+          AND (fecha = ${fechaClase}::timestamp OR fecha IS NULL)
+      `
+      count = Number(result[0]?.count || 0)
+    } else {
+      // Cuando no hay fecha específica, contar solo suscripciones con fecha = null
+      count = await prisma.claseSubscription.count({
+        where: {
+          claseId: claseId,
+          fecha: null,
+        },
+      })
     }
-
-    const count = await prisma.claseSubscription.count({
-      where: whereClause,
-    })
 
     // Obtener la capacidad de la clase
     const clase = await prisma.clase.findUnique({

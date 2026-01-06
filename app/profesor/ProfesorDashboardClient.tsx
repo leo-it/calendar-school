@@ -372,12 +372,7 @@ export default function ProfesorDashboardClient({ user }: { user: { id: string; 
                 {clases.map((clase) => (
                   <tr key={clase.id}>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      <button
-                        onClick={() => setClaseSeleccionada(clase)}
-                        className="text-primary-600 hover:text-primary-900 hover:underline cursor-pointer"
-                      >
-                        {clase.titulo}
-                      </button>
+                      {clase.titulo}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {diasSemana[clase.diaSemana]}
@@ -405,6 +400,13 @@ export default function ProfesorDashboardClient({ user }: { user: { id: string; 
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <button
+                        onClick={() => setClaseSeleccionada(clase)}
+                        className="text-primary-600 hover:text-primary-900 mr-4 font-medium"
+                        title="Ver y gestionar alumnos inscritos"
+                      >
+                        👥 Alumnos
+                      </button>
                       <Link
                         href={`/clases/${clase.id}/editar`}
                         className="text-primary-600 hover:text-primary-900 mr-4"

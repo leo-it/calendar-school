@@ -4,8 +4,8 @@ import { useState, useEffect } from 'react'
 
 interface Suscriptor {
   id: string
-  userId: string
-  email: string
+  userId: string | null
+  email: string | null
   name: string | null
   apellido: string | null
   dni: string | null
@@ -44,6 +44,16 @@ export default function ModalSuscriptores({
   const [usuariosEncontrados, setUsuariosEncontrados] = useState<Usuario[]>([])
   const [buscando, setBuscando] = useState(false)
   const [añadiendo, setAñadiendo] = useState<string | null>(null)
+  const [modoInscripcion, setModoInscripcion] = useState<'buscar' | 'nuevo'>('buscar')
+  const [formularioNuevo, setFormularioNuevo] = useState({
+    nombre: '',
+    apellido: '',
+    dni: '',
+    email: '',
+    phone: '',
+  })
+  const [creandoNuevo, setCreandoNuevo] = useState(false)
+  const [eliminando, setEliminando] = useState<string | null>(null)
 
   useEffect(() => {
     cargarSuscriptores()
@@ -123,12 +133,27 @@ export default function ModalSuscriptores({
     setAñadiendo(userId)
     try {
       const idReal = claseId.includes('-') ? claseId.split('-')[0] : claseId
+      
+      // Extraer fecha si está en el claseId
+      let fechaClase: string | null = null
+      if (claseId.includes('-')) {
+        const partes = claseId.split('-')
+        if (partes.length >= 4) {
+          fechaClase = `${partes[1]}-${partes[2]}-${partes[3]}`
+        }
+      }
+      
+      const body: any = { userId }
+      if (fechaClase) {
+        body.fecha = fechaClase
+      }
+      
       const response = await fetch(`/api/clases/${idReal}/subscriptions/manual`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ userId }),
+        body: JSON.stringify(body),
       })
 
       if (!response.ok) {
@@ -149,6 +174,106 @@ export default function ModalSuscriptores({
       alert('Error al añadir usuario')
     } finally {
       setAñadiendo(null)
+    }
+  }
+
+  const inscribirNuevoAlumno = async () => {
+    if (!formularioNuevo.nombre || !formularioNuevo.apellido) {
+      alert('El nombre y apellido son requeridos')
+      return
+    }
+
+    setCreandoNuevo(true)
+    try {
+      const idReal = claseId.includes('-') ? claseId.split('-')[0] : claseId
+      
+      // Extraer fecha si está en el claseId
+      let fechaClase: string | null = null
+      if (claseId.includes('-')) {
+        const partes = claseId.split('-')
+        if (partes.length >= 4) {
+          fechaClase = `${partes[1]}-${partes[2]}-${partes[3]}`
+        }
+      }
+
+      const response = await fetch(`/api/clases/${idReal}/subscriptions/manual`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          nombre: formularioNuevo.nombre,
+          apellido: formularioNuevo.apellido,
+          dni: formularioNuevo.dni || null,
+          email: formularioNuevo.email || '-',
+          phone: formularioNuevo.phone || null,
+          fecha: fechaClase,
+        }),
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        alert(data.error || 'Error al inscribir alumno')
+        return
+      }
+
+      // Recargar suscriptores
+      await cargarSuscriptores()
+      setFormularioNuevo({ nombre: '', apellido: '', dni: '', email: '', phone: '' })
+      setModoInscripcion('buscar')
+      
+      if (onActualizada) {
+        onActualizada()
+      }
+    } catch (err) {
+      alert('Error al inscribir alumno')
+    } finally {
+      setCreandoNuevo(false)
+    }
+  }
+
+  const eliminarSuscriptor = async (subscriptionId: string, userId: string | null) => {
+    if (!confirm('¿Estás seguro de que quieres eliminar a este alumno de la clase?')) {
+      return
+    }
+
+    setEliminando(subscriptionId)
+    try {
+      const idReal = claseId.includes('-') ? claseId.split('-')[0] : claseId
+      let fechaClase: string | null = null
+      if (claseId.includes('-')) {
+        const partes = claseId.split('-')
+        if (partes.length >= 4) {
+          fechaClase = `${partes[1]}-${partes[2]}-${partes[3]}`
+        }
+      }
+
+      const response = await fetch(`/api/clases/${idReal}/subscriptions`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          subscriptionId, 
+          userId, // Pasar userId para asegurar la eliminación correcta de suscripciones de usuario
+          fecha: fechaClase // Pasar la fecha para eliminar la suscripción exacta
+        }),
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        alert(data.error || 'Error al eliminar suscriptor')
+        return
+      }
+
+      await cargarSuscriptores()
+      if (onActualizada) {
+        onActualizada()
+      }
+    } catch (err) {
+      alert('Error al eliminar suscriptor')
+    } finally {
+      setEliminando(null)
     }
   }
 
@@ -185,55 +310,166 @@ export default function ModalSuscriptores({
 
         {/* Buscar y añadir usuario */}
         <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Buscar y añadir estudiante
-          </label>
-          <div className="relative">
-            <input
-              type="text"
-              value={buscarUsuario}
-              onChange={(e) => setBuscarUsuario(e.target.value)}
-              placeholder="Ej: Juan Pérez o juan@email.com"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+          <div className="flex gap-2 mb-3">
+            <button
+              onClick={() => setModoInscripcion('buscar')}
+              className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors ${
+                modoInscripcion === 'buscar'
+                  ? 'bg-primary-600 text-white'
+                  : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+              }`}
               disabled={cuposDisponibles === 0}
-            />
-            {buscando && (
-              <div className="absolute right-3 top-2.5">
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary-600"></div>
-              </div>
-            )}
+            >
+              Buscar Alumno
+            </button>
+            <button
+              onClick={() => setModoInscripcion('nuevo')}
+              className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors ${
+                modoInscripcion === 'nuevo'
+                  ? 'bg-primary-600 text-white'
+                  : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+              }`}
+              disabled={cuposDisponibles === 0}
+            >
+              Inscribir Nuevo
+            </button>
           </div>
 
-          {/* Lista de usuarios encontrados */}
-          {usuariosEncontrados.length > 0 && (
-            <div className="mt-2 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
-              {usuariosEncontrados.map((usuario) => (
-                <div
-                  key={usuario.id}
-                  className="px-4 py-3 border-b border-gray-100 last:border-b-0 hover:bg-gray-50 flex justify-between items-center"
-                >
-                  <div>
-                    <p className="font-medium text-gray-900">
-                      {usuario.name || 'Sin nombre'}
-                      {usuario.apellido && ` ${usuario.apellido}`}
-                    </p>
-                    {usuario.dni && (
-                      <p className="text-xs text-gray-500">DNI: {usuario.dni}</p>
-                    )}
-                    <p className="text-sm text-gray-500">{usuario.email}</p>
-                    {usuario.phone && (
-                      <p className="text-xs text-gray-400">{usuario.phone}</p>
-                    )}
+          {modoInscripcion === 'buscar' ? (
+            <>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Buscar estudiante registrado
+              </label>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={buscarUsuario}
+                  onChange={(e) => setBuscarUsuario(e.target.value)}
+                  placeholder="Ej: Juan Pérez o juan@email.com"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  disabled={cuposDisponibles === 0}
+                />
+                {buscando && (
+                  <div className="absolute right-3 top-2.5">
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary-600"></div>
                   </div>
-                  <button
-                    onClick={() => añadirUsuario(usuario.id)}
-                    disabled={añadiendo === usuario.id || cuposDisponibles === 0}
-                    className="px-3 py-1.5 bg-primary-600 text-white text-sm rounded-lg hover:bg-primary-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
-                  >
-                    {añadiendo === usuario.id ? 'Añadiendo...' : 'Añadir'}
-                  </button>
+                )}
+              </div>
+
+              {/* Lista de usuarios encontrados */}
+              {usuariosEncontrados.length > 0 && (
+                <div className="mt-2 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                  {usuariosEncontrados.map((usuario) => (
+                    <div
+                      key={usuario.id}
+                      className="px-4 py-3 border-b border-gray-100 last:border-b-0 hover:bg-gray-50 flex justify-between items-center"
+                    >
+                      <div>
+                        <p className="font-medium text-gray-900">
+                          {usuario.name || 'Sin nombre'}
+                          {usuario.apellido && ` ${usuario.apellido}`}
+                        </p>
+                        {usuario.dni && (
+                          <p className="text-xs text-gray-500">DNI: {usuario.dni}</p>
+                        )}
+                        <p className="text-sm text-gray-500">{usuario.email}</p>
+                        {usuario.phone && (
+                          <p className="text-xs text-gray-400">{usuario.phone}</p>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => añadirUsuario(usuario.id)}
+                        disabled={añadiendo === usuario.id || cuposDisponibles === 0}
+                        className="px-3 py-1.5 bg-primary-600 text-white text-sm rounded-lg hover:bg-primary-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                      >
+                        {añadiendo === usuario.id ? 'Añadiendo...' : 'Añadir'}
+                      </button>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              )}
+            </>
+          ) : (
+            <div className="space-y-3">
+              <label className="block text-sm font-medium text-gray-700">
+                Datos del nuevo alumno
+              </label>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                    Nombre <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={formularioNuevo.nombre}
+                    onChange={(e) => setFormularioNuevo({ ...formularioNuevo, nombre: e.target.value })}
+                    placeholder="Ej: Juan"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
+                    disabled={cuposDisponibles === 0}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                    Apellido <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={formularioNuevo.apellido}
+                    onChange={(e) => setFormularioNuevo({ ...formularioNuevo, apellido: e.target.value })}
+                    placeholder="Ej: Pérez"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
+                    disabled={cuposDisponibles === 0}
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                    DNI (opcional)
+                  </label>
+                  <input
+                    type="text"
+                    value={formularioNuevo.dni}
+                    onChange={(e) => setFormularioNuevo({ ...formularioNuevo, dni: e.target.value })}
+                    placeholder="Ej: 12345678"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
+                    disabled={cuposDisponibles === 0}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                    Teléfono (opcional)
+                  </label>
+                  <input
+                    type="text"
+                    value={formularioNuevo.phone}
+                    onChange={(e) => setFormularioNuevo({ ...formularioNuevo, phone: e.target.value })}
+                    placeholder="Ej: +54 11 1234-5678"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
+                    disabled={cuposDisponibles === 0}
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">
+                  Email (opcional, puede usar "-")
+                </label>
+                <input
+                  type="email"
+                  value={formularioNuevo.email}
+                  onChange={(e) => setFormularioNuevo({ ...formularioNuevo, email: e.target.value })}
+                  placeholder="Ej: juan@email.com o -"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
+                  disabled={cuposDisponibles === 0}
+                />
+              </div>
+              <button
+                onClick={inscribirNuevoAlumno}
+                disabled={creandoNuevo || cuposDisponibles === 0 || !formularioNuevo.nombre || !formularioNuevo.apellido}
+                className="w-full px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-medium transition-colors"
+              >
+                {creandoNuevo ? 'Inscribiendo...' : 'Inscribir Alumno'}
+              </button>
             </div>
           )}
         </div>
@@ -261,7 +497,7 @@ export default function ModalSuscriptores({
                   className="bg-gray-50 border border-gray-200 rounded-lg p-4"
                 >
                   <div className="flex justify-between items-start">
-                    <div>
+                    <div className="flex-1">
                       <p className="font-medium text-gray-900">
                         {suscriptor.name || 'Sin nombre'}
                         {suscriptor.apellido && ` ${suscriptor.apellido}`}
@@ -281,6 +517,18 @@ export default function ModalSuscriptores({
                         })}
                       </p>
                     </div>
+                    <button
+                      onClick={() => eliminarSuscriptor(suscriptor.id)}
+                      disabled={eliminando === suscriptor.id}
+                      className="ml-4 px-3 py-1.5 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                      title="Eliminar de esta clase"
+                    >
+                      {eliminando === suscriptor.id ? (
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      ) : (
+                        'Eliminar'
+                      )}
+                    </button>
                   </div>
                 </div>
               ))}

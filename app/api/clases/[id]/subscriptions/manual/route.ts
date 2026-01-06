@@ -39,7 +39,12 @@ export async function POST(
     }
 
     const body = await request.json()
-    const { userId, fecha } = body
+    const { userId, fecha, nombre, apellido, dni, email, phone } = body
+    
+    // Normalizar valores: convertir cadenas vacías a null
+    const dniNormalizado = dni && dni.trim() !== '' ? dni.trim() : null
+    const emailNormalizado = email && email.trim() !== '' ? email.trim() : null
+    const phoneNormalizado = phone && phone.trim() !== '' ? phone.trim() : null
     
     // Si se proporciona fecha explícitamente, usarla
     if (fecha) {
@@ -49,8 +54,29 @@ export async function POST(
       }
     }
 
-    if (!userId) {
-      return NextResponse.json({ error: 'userId es requerido' }, { status: 400 })
+    // Validar que se proporcione userId O datos del alumno nuevo
+    const nombreNormalizado = nombre && nombre.trim() !== '' ? nombre.trim() : null
+    const apellidoNormalizado = apellido && apellido.trim() !== '' ? apellido.trim() : null
+    
+    if (!userId && (!nombreNormalizado || !apellidoNormalizado)) {
+      return NextResponse.json(
+        { error: 'Debe proporcionar userId o nombre y apellido del alumno' },
+        { status: 400 }
+      )
+    }
+
+    // Si se proporciona userId, validar que el usuario existe
+    // Si no se proporciona userId, es una inscripción manual sin usuario registrado
+    let usuarioAAñadir: any = null
+    if (userId) {
+      usuarioAAñadir = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { escuelaId: true, email: true, name: true }
+      })
+
+      if (!usuarioAAñadir) {
+        return NextResponse.json({ error: 'Usuario a añadir no encontrado' }, { status: 404 })
+      }
     }
 
     // Obtener el usuario completo
@@ -92,18 +118,8 @@ export async function POST(
       return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
     }
 
-    // Verificar que el usuario a añadir existe y pertenece a la misma escuela
-    const usuarioAAñadir = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { escuelaId: true, email: true, name: true }
-    })
-
-    if (!usuarioAAñadir) {
-      return NextResponse.json({ error: 'Usuario a añadir no encontrado' }, { status: 404 })
-    }
-
-    // Verificar que pertenece a la misma escuela (si el profesor/admin tiene escuela)
-    if (user.escuelaId && usuarioAAñadir.escuelaId !== user.escuelaId) {
+    // Verificar que pertenece a la misma escuela (si el profesor/admin tiene escuela y hay userId)
+    if (userId && user.escuelaId && usuarioAAñadir.escuelaId !== user.escuelaId) {
       return NextResponse.json(
         { error: 'El usuario debe pertenecer a la misma escuela' },
         { status: 403 }
@@ -130,49 +146,276 @@ export async function POST(
     }
 
     // Crear o verificar suscripción (con fecha específica)
-    const subscription = await prisma.claseSubscription.upsert({
-      where: {
-        userId_claseId_fecha: {
-          userId: userId,
-          claseId: claseId,
-          fecha: fechaClase as any, // Prisma acepta Date | null pero TypeScript necesita el cast
+    let subscription
+    
+    if (userId) {
+      // Inscripción de usuario existente
+      // Si fecha es null, no podemos usar el constraint único directamente
+      if (fechaClase === null) {
+        // Buscar si ya existe
+        const existente = await prisma.claseSubscription.findFirst({
+          where: {
+            userId: userId,
+            claseId: claseId,
+            fecha: null,
+          },
+        })
+
+        if (existente) {
+          // Obtener el usuario para incluir en la respuesta
+          const user = await prisma.user.findUnique({
+            where: { id: userId },
+            select: {
+              id: true,
+              email: true,
+              name: true,
+              apellido: true,
+              dni: true,
+              phone: true,
+            },
+          })
+          subscription = { ...existente, user } as any
+        } else {
+          subscription = await prisma.claseSubscription.create({
+            data: {
+              userId: userId,
+              claseId: claseId,
+              fecha: null,
+            },
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  email: true,
+                  name: true,
+                  apellido: true,
+                  dni: true,
+                  phone: true,
+                },
+              },
+            },
+          }) as any
+        }
+      } else {
+        // Si hay fecha, usar upsert normalmente
+        subscription = await prisma.claseSubscription.upsert({
+          where: {
+            userId_claseId_fecha: {
+              userId: userId,
+              claseId: claseId,
+              fecha: fechaClase,
+            },
+          },
+          update: {},
+          create: {
+            userId: userId,
+            claseId: claseId,
+            fecha: fechaClase,
+          },
+          include: {
+            user: {
+              select: {
+                id: true,
+                email: true,
+                name: true,
+                apellido: true,
+                dni: true,
+                phone: true,
+              },
+            },
+          },
+        })
+      }
+
+      return NextResponse.json({
+        message: 'Usuario añadido correctamente',
+        subscription: {
+          id: subscription.id,
+          userId: subscription.userId,
+          email: subscription.user?.email || null,
+          name: subscription.user?.name || null,
+          apellido: subscription.user?.apellido || null,
+          dni: subscription.user?.dni || null,
+          phone: subscription.user?.phone || null,
+          fechaInscripcion: subscription.createdAt,
         },
-      },
-      update: {},
-      create: {
-        userId: userId,
+      })
+    } else {
+      // Inscripción manual sin usuario registrado
+      // Validar que no exista una inscripción duplicada (mismo nombre, apellido, dni, clase, fecha)
+      const emailFinal = emailNormalizado || '-'
+      
+      // Verificar si ya existe una inscripción manual similar
+      // Usar SQL raw para buscar registros donde userId IS NULL
+      // Construir la consulta condicionalmente según si dni es null o no
+      let existeInscripcion: Array<{ id: string }>
+      
+      if (dniNormalizado) {
+        // Si dni tiene valor, buscar por dni específico
+        existeInscripcion = await prisma.$queryRaw<Array<{ id: string }>>`
+          SELECT id FROM "ClaseSubscription"
+          WHERE "claseId" = ${claseId}
+            AND "nombre" = ${nombreNormalizado}
+            AND "apellido" = ${apellidoNormalizado}
+            AND "fecha" = ${fechaClase}
+            AND "dni" = ${dniNormalizado}
+            AND "userId" IS NULL
+          LIMIT 1
+        `
+      } else {
+        // Si dni es null, buscar registros donde dni también es null
+        existeInscripcion = await prisma.$queryRaw<Array<{ id: string }>>`
+          SELECT id FROM "ClaseSubscription"
+          WHERE "claseId" = ${claseId}
+            AND "nombre" = ${nombreNormalizado}
+            AND "apellido" = ${apellidoNormalizado}
+            AND "fecha" = ${fechaClase}
+            AND "dni" IS NULL
+            AND "userId" IS NULL
+          LIMIT 1
+        `
+      }
+
+      if (existeInscripcion && existeInscripcion.length > 0) {
+        return NextResponse.json(
+          { error: 'Ya existe una inscripción para este alumno en esta clase' },
+          { status: 400 }
+        )
+      }
+
+      // Usar create sin incluir la relación user cuando userId es null
+      // Construir el objeto data explícitamente para evitar problemas con Prisma
+      const dataToCreate: any = {
+        userId: null,
         claseId: claseId,
         fecha: fechaClase,
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            email: true,
-            name: true,
-            apellido: true,
-            dni: true,
-            phone: true,
-          },
-        },
-      },
-    })
+        nombre: nombreNormalizado,
+        apellido: apellidoNormalizado,
+        dni: dniNormalizado,
+        email: emailFinal,
+        phone: phoneNormalizado,
+      }
+      
+      // Intentar crear usando create, pero si falla, usar SQL raw
+      try {
+        subscription = await prisma.claseSubscription.create({
+          data: dataToCreate,
+        })
+      } catch (createError: any) {
+        // Si Prisma requiere la relación user, usar SQL raw
+        if (createError.message?.includes('user') || createError.message?.includes('Argument')) {
+          // Generar un ID similar a CUID (25 caracteres, empezando con 'c')
+          const generateId = () => {
+            const chars = 'abcdefghijklmnopqrstuvwxyz0123456789'
+            let id = 'c'
+            for (let i = 0; i < 24; i++) {
+              id += chars.charAt(Math.floor(Math.random() * chars.length))
+            }
+            return id
+          }
+          
+          const newId = generateId()
+          
+          // Usar SQL raw para insertar directamente con ID generado
+          await prisma.$executeRaw`
+            INSERT INTO "ClaseSubscription" (
+              "id",
+              "userId",
+              "claseId",
+              "fecha",
+              "nombre",
+              "apellido",
+              "dni",
+              "email",
+              "phone",
+              "createdAt"
+            )
+            VALUES (
+              ${newId}::text,
+              NULL,
+              ${claseId}::text,
+              ${fechaClase}::timestamp,
+              ${nombreNormalizado}::text,
+              ${apellidoNormalizado}::text,
+              ${dniNormalizado}::text,
+              ${emailFinal}::text,
+              ${phoneNormalizado}::text,
+              NOW()
+            )
+          `
+          
+          // Obtener el registro recién creado usando SQL raw para evitar problemas con tipos
+          const result = await prisma.$queryRaw<Array<{
+            id: string
+            userId: string | null
+            claseId: string
+            fecha: Date | null
+            nombre: string | null
+            apellido: string | null
+            dni: string | null
+            email: string | null
+            phone: string | null
+            createdAt: Date
+          }>>`
+            SELECT 
+              id,
+              "userId",
+              "claseId",
+              fecha,
+              nombre,
+              apellido,
+              dni,
+              email,
+              phone,
+              "createdAt"
+            FROM "ClaseSubscription"
+            WHERE id = ${newId}::text
+          `
+          
+          if (!result || result.length === 0) {
+            throw new Error('Error al crear la inscripción')
+          }
+          
+          // Construir el objeto subscription desde el resultado SQL
+          subscription = {
+            id: result[0].id,
+            userId: result[0].userId,
+            claseId: result[0].claseId,
+            fecha: result[0].fecha,
+            nombre: result[0].nombre,
+            apellido: result[0].apellido,
+            dni: result[0].dni,
+            email: result[0].email,
+            phone: result[0].phone,
+            createdAt: result[0].createdAt,
+          } as any
+        } else {
+          throw createError
+        }
+      }
 
-    return NextResponse.json({
-      message: 'Usuario añadido correctamente',
-      subscription: {
-        id: subscription.id,
-        userId: subscription.userId,
-        email: subscription.user.email,
-        name: subscription.user.name,
-        apellido: subscription.user.apellido,
-        dni: subscription.user.dni,
-        phone: subscription.user.phone,
-        fechaInscripcion: subscription.createdAt,
-      },
-    })
+      return NextResponse.json({
+        message: 'Alumno añadido correctamente',
+        subscription: {
+          id: subscription.id,
+          userId: null,
+          email: (subscription as any).email || null,
+          name: (subscription as any).nombre || null,
+          apellido: (subscription as any).apellido || null,
+          dni: (subscription as any).dni || null,
+          phone: (subscription as any).phone || null,
+          fechaInscripcion: subscription.createdAt,
+        },
+      })
+    }
   } catch (error: any) {
     console.error('Error al añadir usuario manualmente:', error)
+    console.error('Error details:', {
+      message: error.message,
+      code: error.code,
+      meta: error.meta,
+      stack: error.stack,
+    })
     if (error.code === 'P2002') {
       return NextResponse.json(
         { error: 'El usuario ya está inscrito en esta clase' },
@@ -180,7 +423,10 @@ export async function POST(
       )
     }
     return NextResponse.json(
-      { error: 'Error al añadir usuario' },
+      { 
+        error: 'Error al añadir usuario',
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      },
       { status: 500 }
     )
   }

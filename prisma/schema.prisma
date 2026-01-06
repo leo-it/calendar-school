@@ -48,7 +48,7 @@ model User {
 
   // Relaciones
   escuela             Escuela?             @relation(fields: [escuelaId], references: [id])
-  clasesSubscritas    ClaseSubscription[]
+  clasesSubscritas    ClaseSubscription[]  @relation("UserSubscriptions")
   notificaciones      Notificacion[]
   invitacionesCreadas InvitacionProfesor[] @relation("CreadorInvitacion")
 
@@ -102,16 +102,23 @@ model Clase {
 
 model ClaseSubscription {
   id        String    @id @default(cuid())
-  userId    String
+  userId    String?   // Opcional: null si es inscripción manual sin usuario registrado
   claseId   String
   fecha     DateTime? // Fecha específica de la clase (null = todas las semanas)
+  // Campos opcionales para inscripciones manuales sin usuario registrado
+  nombre    String?
+  apellido  String?
+  dni       String?
+  email     String?   // Email opcional (puede ser "-" o similar para inscripciones manuales)
+  phone     String?
   createdAt DateTime  @default(now())
 
-  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  clase Clase @relation(fields: [claseId], references: [id], onDelete: Cascade)
+  user  User?  @relation("UserSubscriptions", fields: [userId], references: [id], onDelete: Cascade)
+  clase Clase  @relation(fields: [claseId], references: [id], onDelete: Cascade)
 
   @@unique([userId, claseId, fecha])
   @@index([claseId, fecha])
+  @@index([claseId, nombre, apellido]) // Para búsquedas de inscripciones manuales
 }
 
 model Notificacion {

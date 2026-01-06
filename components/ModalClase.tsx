@@ -46,12 +46,23 @@ export default function ModalClase({
   const [cargandoEstado, setCargandoEstado] = useState(true)
   const [inscripciones, setInscripciones] = useState<{ inscritos: number; capacidad: number; cuposDisponibles: number } | null>(null)
   const [eliminando, setEliminando] = useState(false)
+  const [eliminandoSuscriptor, setEliminandoSuscriptor] = useState<string | null>(null)
   const [mostrarAlumnos, setMostrarAlumnos] = useState(false)
   const [alumnos, setAlumnos] = useState<any[]>([])
   const [cargandoAlumnos, setCargandoAlumnos] = useState(false)
-  const [mostrarFormularioAlumno, setMostrarFormularioAlumno] = useState(false)
-  const [formularioAlumno, setFormularioAlumno] = useState({ nombre: '', apellido: '', dni: '' })
-  const [creandoAlumno, setCreandoAlumno] = useState(false)
+  const [modoInscripcion, setModoInscripcion] = useState<'buscar' | 'nuevo'>('buscar')
+  const [buscarUsuario, setBuscarUsuario] = useState('')
+  const [usuariosEncontrados, setUsuariosEncontrados] = useState<any[]>([])
+  const [buscando, setBuscando] = useState(false)
+  const [añadiendo, setAñadiendo] = useState<string | null>(null)
+  const [formularioNuevo, setFormularioNuevo] = useState({
+    nombre: '',
+    apellido: '',
+    dni: '',
+    email: '',
+    phone: '',
+  })
+  const [creandoNuevo, setCreandoNuevo] = useState(false)
 
   const puedeEditar = usuarioRole === 'ADMIN' || (usuarioRole === 'PROFESOR' && esAdminEscuela)
   const esProfesor = usuarioRole === 'PROFESOR'
@@ -71,30 +82,20 @@ export default function ModalClase({
     }
   }, [clase])
 
+  useEffect(() => {
+    if (buscarUsuario.length >= 2) {
+      const timeoutId = setTimeout(() => {
+        buscarUsuarios()
+      }, 300)
+      return () => clearTimeout(timeoutId)
+    } else {
+      setUsuariosEncontrados([])
+    }
+  }, [buscarUsuario])
+
   const cargarAlumnos = async () => {
     if (!clase) return
     setCargandoAlumnos(true)
-    try {
-      const claseIdReal = clase.id.includes('-') ? clase.id.split('-')[0] : clase.id
-      const response = await fetch(`/api/clases/${claseIdReal}/subscriptions`)
-      if (response.ok) {
-        const data = await response.json()
-        setAlumnos(data.suscriptores || [])
-      }
-    } catch (error) {
-      console.error('Error al cargar alumnos:', error)
-    } finally {
-      setCargandoAlumnos(false)
-    }
-  }
-
-  const handleCrearAlumno = async () => {
-    if (!clase || !formularioAlumno.nombre.trim()) {
-      alert('El nombre es obligatorio')
-      return
-    }
-
-    setCreandoAlumno(true)
     try {
       // Extraer el ID real de la clase y la fecha (puede ser compuesto como "id-fecha")
       let claseIdReal = clase.id
@@ -109,58 +110,200 @@ export default function ModalClase({
         }
       }
       
-      // Si la clase tiene fecha directamente, usarla
+      const url = fechaClase 
+        ? `/api/clases/${claseIdReal}/subscriptions?fecha=${fechaClase}`
+        : `/api/clases/${claseIdReal}/subscriptions`
+      const response = await fetch(url)
+      if (response.ok) {
+        const data = await response.json()
+        setAlumnos(data.suscriptores || [])
+      }
+    } catch (error) {
+      console.error('Error al cargar alumnos:', error)
+    } finally {
+      setCargandoAlumnos(false)
+    }
+  }
+
+  const buscarUsuarios = async () => {
+    setBuscando(true)
+    try {
+      const response = await fetch(`/api/usuarios/buscar?q=${encodeURIComponent(buscarUsuario)}`)
+      
+      if (!response.ok) {
+        return
+      }
+
+      const usuarios = await response.json()
+      // Filtrar usuarios que ya están suscritos
+      const usuariosNoSuscritos = usuarios.filter(
+        (u: any) => !alumnos.some(a => a.userId === u.id)
+      )
+      setUsuariosEncontrados(usuariosNoSuscritos)
+    } catch (err) {
+      console.error('Error al buscar usuarios:', err)
+    } finally {
+      setBuscando(false)
+    }
+  }
+
+  const añadirUsuario = async (userId: string) => {
+    if (!clase) return
+    
+    setAñadiendo(userId)
+    try {
+      let claseIdReal = clase.id
+      let fechaClase: string | null = null
+      
+      if (clase.id.includes('-')) {
+        const partes = clase.id.split('-')
+        claseIdReal = partes[0]
+        if (partes.length >= 4) {
+          fechaClase = `${partes[1]}-${partes[2]}-${partes[3]}`
+        }
+      }
+      
       if (clase.fecha && !fechaClase) {
         const fecha = typeof clase.fecha === 'string' ? new Date(clase.fecha) : clase.fecha
         fechaClase = fecha.toISOString().split('T')[0]
       }
-      
-      const response = await fetch('/api/usuarios/crear-estudiante', {
+
+      const response = await fetch(`/api/clases/${claseIdReal}/subscriptions/manual`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          nombre: formularioAlumno.nombre.trim(),
-          apellido: formularioAlumno.apellido?.trim() || undefined,
-          dni: formularioAlumno.dni?.trim() || undefined,
-          claseId: fechaClase ? `${claseIdReal}-${fechaClase}` : claseIdReal,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          userId,
+          fecha: fechaClase,
         }),
       })
 
-      if (response.ok) {
-        setFormularioAlumno({ nombre: '', apellido: '', dni: '' })
-        setMostrarFormularioAlumno(false)
-        await cargarAlumnos()
-        await cargarInscripciones()
-        onActualizada()
-      } else {
-        const errorData = await response.json()
-        // Mostrar mensajes de error detallados al usuario
-        let errorMessage = errorData.mensaje || errorData.error || 'Error al crear estudiante'
-        
-        // Si hay detalles, agregarlos de forma más legible
-        if (errorData.details && Array.isArray(errorData.details) && errorData.details.length > 0) {
-          const detalles = errorData.details
-            .map((d: any) => {
-              if (typeof d === 'string') return d
-              if (d.mensaje) return `${d.campo || 'Campo'}: ${d.mensaje}`
-              if (d.message) return d.message
-              return JSON.stringify(d)
-            })
-            .filter(Boolean)
-            .join('\n')
-          
-          if (detalles && !errorMessage.includes(detalles)) {
-            errorMessage = `${errorMessage}\n\n${detalles}`
-          }
-        }
-        
-        alert(errorMessage)
+      if (!response.ok) {
+        const data = await response.json()
+        alert(data.error || 'Error al añadir usuario')
+        return
       }
-    } catch (error) {
-      console.error('Error al crear estudiante:', error)
-      alert('Error al crear estudiante')
+
+      await cargarAlumnos()
+      await cargarInscripciones()
+      setBuscarUsuario('')
+      setUsuariosEncontrados([])
+      onActualizada()
+    } catch (err) {
+      alert('Error al añadir usuario')
     } finally {
-      setCreandoAlumno(false)
+      setAñadiendo(null)
+    }
+  }
+
+  const inscribirNuevoAlumno = async () => {
+    if (!clase || !formularioNuevo.nombre || !formularioNuevo.apellido) {
+      alert('El nombre y apellido son requeridos')
+      return
+    }
+
+    setCreandoNuevo(true)
+    try {
+      let claseIdReal = clase.id
+      let fechaClase: string | null = null
+      
+      if (clase.id.includes('-')) {
+        const partes = clase.id.split('-')
+        claseIdReal = partes[0]
+        if (partes.length >= 4) {
+          fechaClase = `${partes[1]}-${partes[2]}-${partes[3]}`
+        }
+      }
+      
+      if (clase.fecha && !fechaClase) {
+        const fecha = typeof clase.fecha === 'string' ? new Date(clase.fecha) : clase.fecha
+        fechaClase = fecha.toISOString().split('T')[0]
+      }
+
+      const response = await fetch(`/api/clases/${claseIdReal}/subscriptions/manual`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          nombre: formularioNuevo.nombre,
+          apellido: formularioNuevo.apellido,
+          dni: formularioNuevo.dni || null,
+          email: formularioNuevo.email || '-',
+          phone: formularioNuevo.phone || null,
+          fecha: fechaClase,
+        }),
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        alert(data.error || 'Error al inscribir alumno')
+        return
+      }
+
+      await cargarAlumnos()
+      await cargarInscripciones()
+      setFormularioNuevo({ nombre: '', apellido: '', dni: '', email: '', phone: '' })
+      setModoInscripcion('buscar')
+      onActualizada()
+    } catch (err) {
+      alert('Error al inscribir alumno')
+    } finally {
+      setCreandoNuevo(false)
+    }
+  }
+
+  const eliminarSuscriptor = async (subscriptionId: string, userId: string | null) => {
+    if (!confirm('¿Estás seguro de que quieres eliminar a este alumno de la clase?')) {
+      return
+    }
+
+    setEliminandoSuscriptor(subscriptionId)
+    try {
+      let claseIdReal = clase?.id
+      let fechaClase: string | null = null
+      
+      if (clase?.id.includes('-')) {
+        const partes = clase.id.split('-')
+        claseIdReal = partes[0]
+        if (partes.length >= 4) {
+          fechaClase = `${partes[1]}-${partes[2]}-${partes[3]}`
+        }
+      }
+      
+      if (clase?.fecha && !fechaClase) {
+        const fecha = typeof clase.fecha === 'string' ? new Date(clase.fecha) : clase.fecha
+        fechaClase = fecha.toISOString().split('T')[0]
+      }
+
+      const response = await fetch(`/api/clases/${claseIdReal}/subscriptions`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          subscriptionId, 
+          userId, // Pasar userId para asegurar la eliminación correcta
+          fecha: fechaClase // Pasar la fecha para eliminar la suscripción exacta
+        }),
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        alert(data.error || 'Error al eliminar suscriptor')
+        return
+      }
+
+      await cargarAlumnos()
+      await cargarInscripciones()
+      if (onActualizada) {
+        onActualizada()
+      }
+    } catch (err) {
+      alert('Error al eliminar suscriptor')
+    } finally {
+      setEliminandoSuscriptor(null)
     }
   }
 
@@ -512,7 +655,7 @@ export default function ModalClase({
                               className="bg-white border border-gray-200 rounded-lg p-3"
                             >
                               <div className="flex justify-between items-start">
-                                <div>
+                                <div className="flex-1">
                                   <p className="font-medium text-gray-900">
                                     {alumno.name || 'Sin nombre'}
                                     {alumno.apellido && ` ${alumno.apellido}`}
@@ -523,7 +666,22 @@ export default function ModalClase({
                                   {alumno.email && (
                                     <p className="text-xs text-gray-500">{alumno.email}</p>
                                   )}
+                                  {alumno.phone && (
+                                    <p className="text-xs text-gray-400 mt-1">{alumno.phone}</p>
+                                  )}
                                 </div>
+                                <button
+                                  onClick={() => eliminarSuscriptor(alumno.id, alumno.userId)}
+                                  disabled={eliminandoSuscriptor === alumno.id}
+                                  className="ml-4 px-3 py-1.5 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                                  title="Eliminar de esta clase"
+                                >
+                                  {eliminandoSuscriptor === alumno.id ? (
+                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                  ) : (
+                                    'Eliminar'
+                                  )}
+                                </button>
                               </div>
                             </div>
                           ))}
@@ -531,72 +689,159 @@ export default function ModalClase({
                       )}
 
                       {/* Formulario para agregar nuevo alumno */}
-                      <div className="border-t pt-4">
-                        {!mostrarFormularioAlumno ? (
+                      <div className="border-t pt-4 space-y-3">
+                        <div className="flex gap-2">
                           <button
-                            onClick={() => setMostrarFormularioAlumno(true)}
-                            className="w-full py-2 px-4 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium transition-colors"
+                            onClick={() => setModoInscripcion('buscar')}
+                            className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors ${
+                              modoInscripcion === 'buscar'
+                                ? 'bg-primary-600 text-white'
+                                : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                            }`}
                           >
-                            + Agregar Alumno
+                            Buscar Alumno
                           </button>
+                          <button
+                            onClick={() => setModoInscripcion('nuevo')}
+                            className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors ${
+                              modoInscripcion === 'nuevo'
+                                ? 'bg-primary-600 text-white'
+                                : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                            }`}
+                          >
+                            Inscribir Nuevo
+                          </button>
+                        </div>
+
+                        {modoInscripcion === 'buscar' ? (
+                          <>
+                            <label className="block text-sm font-medium text-gray-700">
+                              Buscar estudiante registrado
+                            </label>
+                            <div className="relative">
+                              <input
+                                type="text"
+                                value={buscarUsuario}
+                                onChange={(e) => setBuscarUsuario(e.target.value)}
+                                placeholder="Ej: Juan Pérez o juan@email.com"
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                              />
+                              {buscando && (
+                                <div className="absolute right-3 top-2.5">
+                                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary-600"></div>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Lista de usuarios encontrados */}
+                            {usuariosEncontrados.length > 0 && (
+                              <div className="bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                                {usuariosEncontrados.map((usuario) => (
+                                  <div
+                                    key={usuario.id}
+                                    className="px-4 py-3 border-b border-gray-100 last:border-b-0 hover:bg-gray-50 flex justify-between items-center"
+                                  >
+                                    <div>
+                                      <p className="font-medium text-gray-900">
+                                        {usuario.name || 'Sin nombre'}
+                                        {usuario.apellido && ` ${usuario.apellido}`}
+                                      </p>
+                                      {usuario.dni && (
+                                        <p className="text-xs text-gray-500">DNI: {usuario.dni}</p>
+                                      )}
+                                      <p className="text-sm text-gray-500">{usuario.email}</p>
+                                      {usuario.phone && (
+                                        <p className="text-xs text-gray-400">{usuario.phone}</p>
+                                      )}
+                                    </div>
+                                    <button
+                                      onClick={() => añadirUsuario(usuario.id)}
+                                      disabled={añadiendo === usuario.id}
+                                      className="px-3 py-1.5 bg-primary-600 text-white text-sm rounded-lg hover:bg-primary-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                                    >
+                                      {añadiendo === usuario.id ? 'Añadiendo...' : 'Añadir'}
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </>
                         ) : (
-                          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-3">
-                            <h4 className="font-semibold text-gray-900">Nuevo Alumno</h4>
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Nombre <span className="text-red-500">*</span>
-                              </label>
-                              <input
-                                type="text"
-                                value={formularioAlumno.nombre}
-                                onChange={(e) => setFormularioAlumno({ ...formularioAlumno, nombre: e.target.value })}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                placeholder="Ej: María"
-                                required
-                              />
+                          <div className="space-y-3">
+                            <label className="block text-sm font-medium text-gray-700">
+                              Datos del nuevo alumno
+                            </label>
+                            <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <label className="block text-xs font-medium text-gray-600 mb-1">
+                                  Nombre <span className="text-red-500">*</span>
+                                </label>
+                                <input
+                                  type="text"
+                                  value={formularioNuevo.nombre}
+                                  onChange={(e) => setFormularioNuevo({ ...formularioNuevo, nombre: e.target.value })}
+                                  placeholder="Ej: Juan"
+                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs font-medium text-gray-600 mb-1">
+                                  Apellido <span className="text-red-500">*</span>
+                                </label>
+                                <input
+                                  type="text"
+                                  value={formularioNuevo.apellido}
+                                  onChange={(e) => setFormularioNuevo({ ...formularioNuevo, apellido: e.target.value })}
+                                  placeholder="Ej: Pérez"
+                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
+                                />
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <label className="block text-xs font-medium text-gray-600 mb-1">
+                                  DNI (opcional)
+                                </label>
+                                <input
+                                  type="text"
+                                  value={formularioNuevo.dni}
+                                  onChange={(e) => setFormularioNuevo({ ...formularioNuevo, dni: e.target.value })}
+                                  placeholder="Ej: 12345678"
+                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs font-medium text-gray-600 mb-1">
+                                  Teléfono (opcional)
+                                </label>
+                                <input
+                                  type="text"
+                                  value={formularioNuevo.phone}
+                                  onChange={(e) => setFormularioNuevo({ ...formularioNuevo, phone: e.target.value })}
+                                  placeholder="Ej: +54 11 1234-5678"
+                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
+                                />
+                              </div>
                             </div>
                             <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Apellido (opcional)
+                              <label className="block text-xs font-medium text-gray-600 mb-1">
+                                Email (opcional, puede usar "-")
                               </label>
                               <input
-                                type="text"
-                                value={formularioAlumno.apellido}
-                                onChange={(e) => setFormularioAlumno({ ...formularioAlumno, apellido: e.target.value })}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                placeholder="Ej: González"
+                                type="email"
+                                value={formularioNuevo.email}
+                                onChange={(e) => setFormularioNuevo({ ...formularioNuevo, email: e.target.value })}
+                                placeholder="Ej: juan@email.com o -"
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
                               />
                             </div>
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1">
-                                DNI (opcional)
-                              </label>
-                              <input
-                                type="text"
-                                value={formularioAlumno.dni}
-                                onChange={(e) => setFormularioAlumno({ ...formularioAlumno, dni: e.target.value })}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                placeholder="Ej: 12345678"
-                              />
-                            </div>
-                            <div className="flex gap-2">
-                              <button
-                                onClick={handleCrearAlumno}
-                                disabled={creandoAlumno || !formularioAlumno.nombre.trim()}
-                                className="flex-1 py-2 px-4 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium transition-colors disabled:opacity-50"
-                              >
-                                {creandoAlumno ? 'Creando...' : 'Crear e Inscribir'}
-                              </button>
-                              <button
-                                onClick={() => {
-                                  setMostrarFormularioAlumno(false)
-                                  setFormularioAlumno({ nombre: '', apellido: '', dni: '' })
-                                }}
-                                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium transition-colors"
-                              >
-                                Cancelar
-                              </button>
-                            </div>
+                            <button
+                              onClick={inscribirNuevoAlumno}
+                              disabled={creandoNuevo || !formularioNuevo.nombre || !formularioNuevo.apellido}
+                              className="w-full px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-medium transition-colors"
+                            >
+                              {creandoNuevo ? 'Inscribiendo...' : 'Inscribir Alumno'}
+                            </button>
                           </div>
                         )}
                       </div>

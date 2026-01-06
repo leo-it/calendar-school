@@ -61,6 +61,15 @@ export async function GET(request: NextRequest) {
       whereClause.OR = [
         { email: { contains: query, mode: 'insensitive' } },
         { name: { contains: query, mode: 'insensitive' } },
+        { apellido: { contains: query, mode: 'insensitive' } },
+        { dni: { contains: query, mode: 'insensitive' } },
+        // Buscar por nombre completo (nombre + apellido)
+        {
+          AND: [
+            { name: { contains: query.split(' ')[0] || query, mode: 'insensitive' } },
+            { apellido: { contains: query.split(' ')[1] || query, mode: 'insensitive' } },
+          ],
+        },
       ]
     }
 
