@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google'
 import './globals.css'
 import { Providers } from './providers'
 import ServiceWorkerRegistration from './sw-register'
+import ChatbotAssistant from '@/components/ChatbotAssistant'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -40,7 +41,10 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-title" content="Almanaque" />
       </head>
       <body className={inter.className}>
-        <Providers>{children}</Providers>
+        <Providers>
+          {children}
+          <ChatbotAssistant />
+        </Providers>
         <ServiceWorkerRegistration />
       </body>
     </html>
