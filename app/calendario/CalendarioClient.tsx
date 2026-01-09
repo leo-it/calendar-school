@@ -42,6 +42,14 @@ export default function CalendarioClient({ user }: { user: { id: string; email: 
       setLoading(true)
       setErrorClases('')
       
+      // Función helper para convertir fecha local a string YYYY-MM-DD sin conversión de zona horaria
+      const fechaToString = (fecha: Date): string => {
+        const año = fecha.getFullYear()
+        const mes = String(fecha.getMonth() + 1).padStart(2, '0')
+        const dia = String(fecha.getDate()).padStart(2, '0')
+        return `${año}-${mes}-${dia}`
+      }
+      
       // Para vista de día, usar directamente la fecha seleccionada
       // Para vista de semana, usar el inicio de la semana
       let fechaInicio: Date
@@ -61,8 +69,12 @@ export default function CalendarioClient({ user }: { user: { id: string; email: 
         fechaFin.setHours(23, 59, 59, 999)
       }
       
+      // Enviar fechas como strings YYYY-MM-DD para evitar problemas de zona horaria
+      const inicioStr = fechaToString(fechaInicio)
+      const finStr = fechaToString(fechaFin)
+      
       const response = await fetch(
-        `/api/clases?inicio=${fechaInicio.toISOString()}&fin=${fechaFin.toISOString()}`
+        `/api/clases?inicio=${inicioStr}&fin=${finStr}`
       )
       
       if (!response.ok) {

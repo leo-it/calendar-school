@@ -59,11 +59,11 @@ function VistaDia({
 }) {
   const clasesDelDia = clases.filter((clase) => {
     if (!clase.fecha) return false
-    // Normalizar ambas fechas a medianoche UTC para evitar problemas de zona horaria
+    // Normalizar ambas fechas a medianoche en hora local para comparar correctamente
     const fechaClase = new Date(clase.fecha.toString())
-    fechaClase.setUTCHours(0, 0, 0, 0)
+    fechaClase.setHours(0, 0, 0, 0)
     const fechaNormalizada = new Date(fecha)
-    fechaNormalizada.setUTCHours(0, 0, 0, 0)
+    fechaNormalizada.setHours(0, 0, 0, 0)
     return fechaClase.getTime() === fechaNormalizada.getTime()
   })
 
@@ -111,24 +111,24 @@ function VistaSemana({
   onClaseActualizada: () => void
   onCambiarVista?: (vista: Vista, fecha?: Date) => void
 }) {
-  // Normalizar la fecha a medianoche UTC primero
-  const fechaUTC = new Date(fecha)
-  fechaUTC.setUTCHours(0, 0, 0, 0)
+  // Normalizar la fecha a medianoche en hora local primero
+  const fechaLocal = new Date(fecha)
+  fechaLocal.setHours(0, 0, 0, 0)
   
-  // Calcular el inicio de semana en UTC
-  // getUTCDay() devuelve 0=Domingo, 1=Lunes, etc.
+  // Calcular el inicio de semana en hora local
+  // getDay() devuelve 0=Domingo, 1=Lunes, etc.
   // Si weekStartsOn: 1 (lunes), necesitamos retroceder (diaSemana - 1) días
-  const diaSemanaUTC = fechaUTC.getUTCDay()
-  const diasDesdeLunes = diaSemanaUTC === 0 ? 6 : diaSemanaUTC - 1 // Si es domingo (0), retroceder 6 días
-  const inicioSemana = new Date(fechaUTC)
-  inicioSemana.setUTCDate(inicioSemana.getUTCDate() - diasDesdeLunes)
+  const diaSemanaLocal = fechaLocal.getDay()
+  const diasDesdeLunes = diaSemanaLocal === 0 ? 6 : diaSemanaLocal - 1 // Si es domingo (0), retroceder 6 días
+  const inicioSemana = new Date(fechaLocal)
+  inicioSemana.setDate(inicioSemana.getDate() - diasDesdeLunes)
   
   const finSemana = new Date(inicioSemana)
-  finSemana.setUTCDate(finSemana.getUTCDate() + 6)
+  finSemana.setDate(finSemana.getDate() + 6)
   
   const dias = Array.from({ length: 7 }, (_, i) => {
     const dia = new Date(inicioSemana)
-    dia.setUTCDate(dia.getUTCDate() + i)
+    dia.setDate(dia.getDate() + i)
     return dia
   })
 
@@ -163,7 +163,7 @@ function VistaSemana({
             <div className="text-sm text-gray-600">
               {format(dia, 'EEE', { locale: es })}
             </div>
-            <div className="text-lg mt-1 font-semibold">
+            <div className="text-lg mt-1 font-semibold text-gray-400">
               {format(dia, 'd')}
             </div>
             {!mismoMes && (
@@ -180,11 +180,11 @@ function VistaSemana({
         {dias.map((dia) => {
           const clasesDelDia = clases.filter((clase) => {
             if (!clase.fecha) return false
-            // Normalizar ambas fechas a medianoche UTC para evitar problemas de zona horaria
+            // Normalizar ambas fechas a medianoche en hora local para comparar correctamente
             const fechaClase = new Date(clase.fecha.toString())
-            fechaClase.setUTCHours(0, 0, 0, 0)
+            fechaClase.setHours(0, 0, 0, 0)
             const diaNormalizado = new Date(dia)
-            diaNormalizado.setUTCHours(0, 0, 0, 0)
+            diaNormalizado.setHours(0, 0, 0, 0)
             return fechaClase.getTime() === diaNormalizado.getTime()
           })
 
@@ -218,11 +218,11 @@ function VistaSemana({
         {dias.map((dia) => {
           const clasesDelDia = clases.filter((clase) => {
             if (!clase.fecha) return false
-            // Normalizar ambas fechas a medianoche UTC para evitar problemas de zona horaria
+            // Normalizar ambas fechas a medianoche en hora local para comparar correctamente
             const fechaClase = new Date(clase.fecha.toString())
-            fechaClase.setUTCHours(0, 0, 0, 0)
+            fechaClase.setHours(0, 0, 0, 0)
             const diaNormalizado = new Date(dia)
-            diaNormalizado.setUTCHours(0, 0, 0, 0)
+            diaNormalizado.setHours(0, 0, 0, 0)
             return fechaClase.getTime() === diaNormalizado.getTime()
           })
 
