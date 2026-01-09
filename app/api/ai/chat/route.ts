@@ -2,12 +2,14 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { GoogleGenerativeAI } from '@google/generative-ai'
+import Groq from 'groq-sdk'
 
 export const dynamic = 'force-dynamic'
 
-// Inicializar Gemini
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
+// Inicializar Groq (gratis y confiable)
+const groq = new Groq({
+  apiKey: process.env.GROQ_API_KEY || '',
+})
 
 // ==================== MEDIDAS DE SEGURIDAD ====================
 
@@ -447,44 +449,104 @@ async function obtenerContextoUsuario(userId: string) {
 }
 
 // Función auxiliar para intentar generar respuesta con diferentes modelos
-async function generarRespuestaConModelo(
-  modelName: string,
+async function generarRespuestaConGroq(
   systemPrompt: string,
   message: string,
   conversationHistory: any[]
-) {
-  const model = genAI.getGenerativeModel({ model: modelName })
-  
-  const history: Array<{ role: 'user' | 'model'; parts: Array<{ text: string }> }> = [
-    {
-      role: 'user',
-      parts: [{ text: systemPrompt }],
-    },
-    {
-      role: 'model',
-      parts: [{ text: 'Entendido. Estoy listo para ayudarte a encontrar y gestionar tus clases de danza. ¿En qué puedo ayudarte?' }],
-    },
-  ]
+): Promise<string> {
+  try {
+    console.log('🔄 Iniciando llamada a Groq...')
+    console.log('📝 Mensaje:', message.substring(0, 100))
+    console.log('📚 Historial:', conversationHistory?.length || 0, 'mensajes')
+    
+    // Construir mensajes para Groq (formato similar a OpenAI)
+    const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
+      {
+        role: 'system',
+        content: systemPrompt,
+      },
+    ]
 
-  if (conversationHistory && Array.isArray(conversationHistory)) {
-    conversationHistory
-      .filter((msg: { role: string; content: string }) => msg.role === 'user' || msg.role === 'assistant')
-      .forEach((msg: { role: string; content: string }) => {
-        history.push({
-          role: msg.role === 'user' ? 'user' : 'model',
-          parts: [{ text: msg.content }],
+    // Agregar historial de conversación
+    if (conversationHistory && Array.isArray(conversationHistory)) {
+      conversationHistory
+        .filter((msg: { role: string; content: string }) => msg.role === 'user' || msg.role === 'assistant')
+        .forEach((msg: { role: string; content: string }) => {
+          messages.push({
+            role: msg.role === 'user' ? 'user' : 'assistant',
+            content: msg.content,
+          })
         })
-      })
-  }
+    }
 
-  const chat = model.startChat({ history })
-  const result = await chat.sendMessage(message)
-  const response = await result.response
-  return response.text()
+    // Agregar el mensaje actual
+    messages.push({
+      role: 'user',
+      content: message,
+    })
+
+    console.log('📤 Enviando', messages.length, 'mensajes a Groq...')
+
+    // Llamar a Groq API
+    // Modelos disponibles actualmente: llama-3.3-70b-versatile, llama-3.1-8b-instant, mixtral-8x7b-32768
+    const completion = await groq.chat.completions.create({
+      model: 'llama-3.3-70b-versatile', // Modelo más potente y actualizado (gratis)
+      messages: messages as any,
+      temperature: 0.7,
+      max_tokens: 2000,
+    })
+
+    console.log('✅ Respuesta recibida de Groq')
+
+    const response = completion.choices[0]?.message?.content
+    if (!response) {
+      console.error('❌ No se recibió contenido en la respuesta:', completion)
+      throw new Error('No se recibió respuesta de Groq')
+    }
+
+    console.log('📥 Respuesta (primeros 100 chars):', response.substring(0, 100))
+    return response
+  } catch (error: any) {
+    console.error('❌ Error en generarRespuestaConGroq:', error)
+    console.error('Error completo:', JSON.stringify(error, null, 2))
+    
+    const errorMessage = error.message || 'Error desconocido'
+    const errorStatus = error.status || error.statusCode || error.response?.status
+
+    // Si es un error de autenticación
+    if (errorStatus === 401 || errorMessage.includes('API key') || errorMessage.includes('unauthorized') || errorMessage.includes('authentication')) {
+      throw new Error(`API key de Groq inválida. Verifica que GROQ_API_KEY esté correctamente configurada. Error: ${errorMessage}`)
+    }
+
+    // Si es un error de rate limit
+    if (errorStatus === 429 || errorMessage.includes('rate limit') || errorMessage.includes('quota')) {
+      throw new Error(`Límite de uso alcanzado. Por favor, intenta más tarde.`)
+    }
+
+    // Re-lanzar el error con más información
+    throw new Error(`Error al llamar a Groq: ${errorMessage} (Status: ${errorStatus || 'N/A'})`)
+  }
 }
 
 export async function POST(request: NextRequest) {
   try {
+    // Verificar que la API key de Groq esté configurada
+    if (!process.env.GROQ_API_KEY || process.env.GROQ_API_KEY.trim() === '') {
+      console.error('GROQ_API_KEY no está configurada o está vacía')
+      console.error('Variables de entorno disponibles:', Object.keys(process.env).filter(k => k.includes('GROQ') || k.includes('GEMINI')))
+      return NextResponse.json(
+        { 
+          error: 'Error de configuración: API key de Groq no configurada',
+          details: process.env.NODE_ENV === 'development' 
+            ? 'GROQ_API_KEY no está configurada en las variables de entorno. Obtén una API key gratis en https://console.groq.com' 
+            : undefined
+        },
+        { status: 500 }
+      )
+    }
+
+    console.log('✅ GROQ_API_KEY configurada (longitud:', process.env.GROQ_API_KEY.length, ')')
+
     const session = await getServerSession(authOptions)
     
     // Rate limiting: por usuario si está autenticado, por IP si no
@@ -650,36 +712,18 @@ IMPORTANTE:
     // Truncar contexto si es muy largo
     systemPrompt = truncateContext(systemPrompt)
 
-    // Intentar con diferentes modelos en orden de preferencia
-    // Primero intentar modelos más recientes, luego fallback a modelos confirmados
-    const modelos = [
-      'gemini-2.5-flash',      // Modelo rápido y eficiente (más reciente)
-      'gemini-2.5-pro',        // Modelo más potente (más reciente)
-      'gemini-2.0-flash',      // Alternativa rápida
-      'gemini-1.5-flash',      // Fallback: modelo rápido y confiable
-      'gemini-1.5-pro',        // Fallback: modelo más potente y confiable
-      'gemini-1.5-flash-002', // Fallback: versión específica de flash
-      'gemini-1.5-pro-002',   // Fallback: versión específica de pro
-    ]
+    // Usar Groq (gratis y confiable)
     let text: string | null = null
-    let ultimoError: any = null
-
-    for (const modelName of modelos) {
-      try {
-        text = await generarRespuestaConModelo(modelName, systemPrompt, sanitizedMessage, sanitizedHistory)
-        console.log(`Modelo ${modelName} funcionó correctamente`)
-        break // Si funciona, salir del loop
-      } catch (error: any) {
-        console.log(`Modelo ${modelName} no disponible:`, error.message)
-        ultimoError = error
-        // Continuar con el siguiente modelo
-        continue
-      }
+    try {
+      text = await generarRespuestaConGroq(systemPrompt, sanitizedMessage, sanitizedHistory)
+      console.log('Groq respondió correctamente')
+    } catch (error: any) {
+      console.error('Error con Groq:', error.message)
+      throw error
     }
 
     if (!text) {
-      // Si ningún modelo funcionó, devolver error
-      throw ultimoError || new Error('Ningún modelo de Gemini está disponible')
+      throw new Error('No se recibió respuesta de Groq')
     }
 
     // Sanitizar respuesta antes de enviar
@@ -702,11 +746,17 @@ IMPORTANTE:
     })
   } catch (error: any) {
     console.error('Error en chat de IA:', error)
+    console.error('Stack trace:', error.stack)
     
-    // Manejar errores específicos de Gemini
-    if (error.message?.includes('API_KEY') || error.status === 401) {
+    // Manejar errores específicos de Groq
+    if (error.message?.includes('API_KEY') || error.message?.includes('API key') || error.status === 401) {
       return NextResponse.json(
-        { error: 'API key de Gemini inválida. Por favor, verifica tu configuración.' },
+        { 
+          error: 'API key de Groq inválida. Por favor, verifica tu configuración.',
+          details: process.env.NODE_ENV === 'development' 
+            ? `${error.message}. Obtén una API key gratis en https://console.groq.com` 
+            : undefined
+        },
         { status: 500 }
       )
     }
@@ -718,15 +768,24 @@ IMPORTANTE:
       )
     }
 
-    // En producción, no exponer detalles técnicos
-    const errorMessage = process.env.NODE_ENV === 'development' 
-      ? error.message 
-      : 'Error al procesar la consulta. Por favor, intenta nuevamente.'
+    if (error.message?.includes('conectividad') || error.message?.includes('fetch failed')) {
+      return NextResponse.json(
+        { 
+          error: 'Error de conectividad con la API de Groq. Verifica tu conexión a internet.',
+          details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        },
+        { status: 500 }
+      )
+    }
 
+    // En producción, no exponer detalles técnicos
     return NextResponse.json(
       { 
         error: 'Error al procesar la consulta. Por favor, intenta nuevamente.',
-        ...(process.env.NODE_ENV === 'development' && { details: error.message })
+        ...(process.env.NODE_ENV === 'development' && { 
+          details: error.message,
+          stack: error.stack
+        })
       },
       { status: 500 }
     )
