@@ -732,6 +732,10 @@ Ver: `.github/workflows/ci-cd.yml`
 
 MIT
 
+---
+
+© 2024 Leonardo Sainz. Todos los derechos reservados.
+
 
 
 🚀 Próximos Pasos: El Camino a Producción
@@ -806,3 +810,7 @@ Kubernetes (K8s) o AWS ECS / Google Cloud Run (Orquestación)
 GitHub Actions (CI/CD)
 
 Prometheus & Grafana (Observabilidad)
+
+---
+
+© 2024 Leonardo Sainz. Todos los derechos reservados.
