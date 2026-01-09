@@ -30,6 +30,8 @@ export default function RootLayout({
 }: {
   children: React.ReactNode
 }) {
+  const isChatbotEnabled = !!(process.env.GROQ_API_KEY && process.env.GROQ_API_KEY.trim())
+  
   return (
     <html lang="es">
       <head>
@@ -44,7 +46,7 @@ export default function RootLayout({
       <body className={inter.className}>
         <Providers>
           {children}
-          <ChatbotAssistant />
+          {isChatbotEnabled && <ChatbotAssistant />}
         </Providers>
         <ServiceWorkerRegistration />
       </body>

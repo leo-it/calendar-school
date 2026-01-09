@@ -375,6 +375,8 @@ Los tests deben seguir el patrón AAA (Arrange, Act, Assert) y mockear dependenc
 
 El chatbot usa Groq, que ofrece un plan gratuito generoso (14,400 requests/día).
 
+**Nota**: El botón del chatbot solo se muestra si `GROQ_API_KEY` está configurada. Si no está configurada, el chatbot no aparecerá en la interfaz.
+
 ### Configuración Local
 
 1. Obtén una API key en https://console.groq.com (gratis, sin tarjeta)
