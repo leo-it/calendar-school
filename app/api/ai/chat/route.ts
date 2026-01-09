@@ -560,13 +560,6 @@ export async function POST(request: NextRequest) {
       sanitizedHistory = historyValidation.sanitized || []
     }
 
-    // Verificar que la API key esté configurada
-    if (!process.env.GEMINI_API_KEY) {
-      return NextResponse.json(
-        { error: 'GEMINI_API_KEY no configurada. Por favor, configura tu API key de Google Gemini.' },
-        { status: 500 }
-      )
-    }
 
     // Obtener contexto según si hay sesión o no
     let contexto

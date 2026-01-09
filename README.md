@@ -386,7 +386,19 @@ El chatbot usa Groq, que ofrece un plan gratuito generoso (14,400 requests/día)
 
 ### Configuración en Producción
 
-Agrega `GROQ_API_KEY` en las variables de entorno de Railway/Render. Ver [DESPLIEGUE.md](./DESPLIEGUE.md) para más detalles.
+**IMPORTANTE**: En producción, las variables de entorno se configuran en la plataforma (Railway/Render), NO en archivos `.env`.
+
+1. **Railway.app**:
+   - Ve a tu servicio → Pestaña "Variables"
+   - Agrega `GROQ_API_KEY` con tu API key
+   - Haz redeploy
+
+2. **Render.com**:
+   - Ve a tu servicio → "Environment"
+   - Agrega `GROQ_API_KEY` con tu API key
+   - Render desplegará automáticamente
+
+Ver [DESPLIEGUE.md](./DESPLIEGUE.md) para más detalles.
 
 ## Próximos Pasos
 
