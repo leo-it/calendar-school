@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import Groq from 'groq-sdk'
+import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
@@ -489,8 +490,14 @@ async function generarRespuestaConGroq(
 }
 
 export async function POST(request: NextRequest) {
+  const requestId = crypto.randomUUID()
+  const startTime = Date.now()
+  
   try {
+    logger.info('Iniciando solicitud de chat', { requestId, action: 'chat_request_start' })
+    
     if (!process.env.GROQ_API_KEY || process.env.GROQ_API_KEY.trim() === '') {
+      logger.error('GROQ_API_KEY no configurada', undefined, { requestId, action: 'chat_config_error' })
       return NextResponse.json(
         { 
           error: 'Error de configuración: API key de Groq no configurada',
@@ -673,6 +680,15 @@ IMPORTANTE:
 
     // Sanitizar respuesta antes de enviar
     const sanitizedResponse = sanitizeResponse(text)
+    
+    const duration = Date.now() - startTime
+    logger.info('Chat completado exitosamente', { 
+      requestId, 
+      action: 'chat_success',
+      duration,
+      hasSession: !!session,
+      userId: session?.user?.id
+    })
 
     return NextResponse.json({
       response: sanitizedResponse,
@@ -690,42 +706,56 @@ IMPORTANTE:
       }
     })
   } catch (error: any) {
-    if (error.message?.includes('API_KEY') || error.message?.includes('API key') || error.status === 401) {
+    const duration = Date.now() - startTime
+    const errorMessage = error?.message || 'Error desconocido'
+    const errorStack = error?.stack
+    
+    logger.error('Error en chat de IA', error, { 
+      requestId, 
+      action: 'chat_error',
+      duration,
+      errorType: error?.name || 'UnknownError',
+      errorMessage,
+      hasGroqApiKey: !!process.env.GROQ_API_KEY,
+      groqApiKeyLength: process.env.GROQ_API_KEY?.length || 0
+    })
+    
+    if (errorMessage.includes('API_KEY') || errorMessage.includes('API key') || errorMessage.includes('unauthorized') || error?.status === 401) {
       return NextResponse.json(
         { 
-          error: 'API key de Groq inválida. Por favor, verifica tu configuración.',
+          error: 'Error de configuración: API key de Groq inválida o no configurada',
           details: process.env.NODE_ENV === 'development' 
-            ? `${error.message}. Obtén una API key gratis en https://console.groq.com` 
-            : undefined
+            ? `${errorMessage}. Verifica que GROQ_API_KEY esté configurada correctamente en Railway. Obtén una API key gratis en https://console.groq.com` 
+            : 'Verifica que GROQ_API_KEY esté configurada en las variables de entorno de producción.'
         },
         { status: 500 }
       )
     }
 
-    if (error.message?.includes('quota') || error.message?.includes('rate limit') || error.status === 429) {
+    if (errorMessage.includes('quota') || errorMessage.includes('rate limit') || error?.status === 429) {
       return NextResponse.json(
         { error: 'Límite de uso alcanzado. Por favor, intenta más tarde.' },
         { status: 429 }
       )
     }
 
-    if (error.message?.includes('conectividad') || error.message?.includes('fetch failed')) {
+    if (errorMessage.includes('conectividad') || errorMessage.includes('fetch failed') || errorMessage.includes('ECONNREFUSED') || errorMessage.includes('ETIMEDOUT')) {
       return NextResponse.json(
         { 
-          error: 'Error de conectividad con la API de Groq. Verifica tu conexión a internet.',
-          details: process.env.NODE_ENV === 'development' ? error.message : undefined
+          error: 'Error de conectividad con la API de Groq. Por favor, intenta más tarde.',
+          details: process.env.NODE_ENV === 'development' ? errorMessage : undefined
         },
         { status: 500 }
       )
     }
 
-    // En producción, no exponer detalles técnicos
     return NextResponse.json(
       { 
         error: 'Error al procesar la consulta. Por favor, intenta nuevamente.',
         ...(process.env.NODE_ENV === 'development' && { 
-          details: error.message,
-          stack: error.stack
+          details: errorMessage,
+          stack: errorStack,
+          requestId
         })
       },
       { status: 500 }
