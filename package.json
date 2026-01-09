@@ -13,7 +13,9 @@
     "db:studio": "prisma studio",
     "seed": "tsx scripts/seed.ts",
     "generate:icons": "node scripts/generar-iconos.js",
-    "prepare": "husky"
+    "prepare": "husky",
+    "clean": "rm -rf .next node_modules/.cache",
+    "clean:all": "rm -rf .next node_modules/.cache .turbo"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",

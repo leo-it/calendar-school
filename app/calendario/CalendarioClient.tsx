@@ -177,7 +177,8 @@ export default function CalendarioClient({ user }: { user: { id: string; email: 
     new Set(clases.map(c => ({ id: c.profesorId, name: c.profesor.name })))
   ).map(p => ({ id: p.id, name: p.name }))
 
-  const subtitle = `${session?.user?.name || session?.user?.email}${session?.user?.role ? ` • ${session.user.role}` : ''}`
+  // Usar el prop user que viene del servidor en lugar de session para evitar "undefined"
+  const subtitle = `${user.name || user.email || 'Usuario'}${user.role ? ` • ${user.role}` : ''}`
 
   return (
     <div className="min-h-screen bg-gray-50">
