@@ -56,8 +56,15 @@ Esta guía explica cómo desplegar Almanaque de Clases usando Railway.app o Rend
    DATABASE_URL=<usa la variable DATABASE_URL del servicio PostgreSQL>
    NEXTAUTH_URL=<la URL que copiaste en el paso 3, ejemplo: https://calendar-school-production.up.railway.app>
    NEXTAUTH_SECRET=<ver instrucciones abajo>
+   GROQ_API_KEY=<tu_api_key_de_groq - obtén una gratis en https://console.groq.com>
    NODE_ENV=production
    ```
+   
+   **¿Qué es GROQ_API_KEY?**
+   - Es la API key para el chatbot con inteligencia artificial
+   - Es **100% gratis** (no requiere tarjeta de crédito)
+   - Obtén una en: https://console.groq.com → API Keys → Create API Key
+   - Ver guía completa: `CONFIGURACION_PRODUCCION_GROQ.md`
    
    **¿Qué es NEXTAUTH_SECRET?**
    - Es una clave secreta que NextAuth.js usa para cifrar tokens de sesión y cookies
@@ -160,9 +167,12 @@ Esta guía explica cómo desplegar Almanaque de Clases usando Railway.app o Rend
    DATABASE_URL=<Internal Database URL de Render>
    NEXTAUTH_URL=https://almanaque-app.onrender.com
    NEXTAUTH_SECRET=<genera uno con: openssl rand -base64 32>
+   GROQ_API_KEY=<tu_api_key_de_groq - obtén una gratis en https://console.groq.com>
    NODE_ENV=production
    PORT=10000
    ```
+   
+   **GROQ_API_KEY**: API key gratis para el chatbot. Obtén una en https://console.groq.com
 
 4. **Configurar build y start commands**
    - Build Command: (dejar vacío, Render usa Docker)
