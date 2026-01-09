@@ -360,6 +360,8 @@ almanaque/
 - [x] Optimizaciones de seguridad y rendimiento
 - [ ] Sistema de membresía y control de inscripciones
 - [ ] Internacionalización (i18n) para múltiples idiomas
+- [ ] **Funcionalidad de cambio de contraseña** - Permitir a los usuarios cambiar su contraseña desde su perfil
+- [ ] **Implementar uso de cookies** - Evaluar casos de uso para cookies (preferencias de usuario, sesiones, etc.)
 
 ## 💳 Sistema de Membresía (Planificado)
 
