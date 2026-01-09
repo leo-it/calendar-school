@@ -348,6 +348,46 @@ almanaque/
 └── types/                 # TypeScript types
 ```
 
+## 🧪 Testing
+
+El proyecto incluye tests unitarios con Vitest para asegurar que el código funcione correctamente y sea predecible.
+
+### Comandos
+
+```bash
+npm run test          # Ejecutar todos los tests
+npm run test:watch    # Modo watch (se ejecutan automáticamente al cambiar archivos)
+npm run test:ui       # Interfaz visual de tests
+npm run test:coverage # Con cobertura de código
+```
+
+### Estado Actual
+
+✅ **9 tests pasando**:
+- 6 tests para API de clases (`/api/clases`)
+- 3 tests para API de chat (`/api/ai/chat`)
+
+### Escribir Nuevos Tests
+
+Los tests deben seguir el patrón AAA (Arrange, Act, Assert) y mockear dependencias externas. Ver `tests/api/clases.test.ts` como ejemplo.
+
+## 🤖 Configuración del Chatbot (Groq)
+
+El chatbot usa Groq, que ofrece un plan gratuito generoso (14,400 requests/día).
+
+### Configuración Local
+
+1. Obtén una API key en https://console.groq.com (gratis, sin tarjeta)
+2. Agrega a `.env.local`:
+   ```bash
+   GROQ_API_KEY=tu_api_key_aqui
+   ```
+3. Reinicia el servidor
+
+### Configuración en Producción
+
+Agrega `GROQ_API_KEY` en las variables de entorno de Railway/Render. Ver [DESPLIEGUE.md](./DESPLIEGUE.md) para más detalles.
+
 ## Próximos Pasos
 
 - [ ] Implementar envío real de emails (nodemailer)

@@ -26,5 +26,23 @@ fi
 
 echo ""
 echo "✓ Lint passed (warnings are allowed)"
-echo "✓ Tests passed (no test suite configured yet)"
+
+# Ejecutar tests unitarios
+echo ""
+echo "🧪 Running unit tests..."
+TEST_OUTPUT=$(npm run test 2>&1)
+TEST_EXIT_CODE=$?
+
+# Mostrar salida de tests
+echo "$TEST_OUTPUT"
+
+# Si los tests fallaron, fallar el commit
+if [ $TEST_EXIT_CODE -ne 0 ]; then
+  echo ""
+  echo "❌ Tests failed. Please fix the issues before committing."
+  exit 1
+fi
+
+echo ""
+echo "✓ Tests passed"
 

@@ -1,0 +1,69 @@
+# Reglas para Cursor AI
+
+## Principios Generales
+
+- Aplica siempre las mejores prácticas y arquitectura clean code
+- Código limpio, legible y mantenible
+- Sigue los patrones establecidos en el proyecto
+- Prioriza la simplicidad sobre la complejidad innecesaria
+
+## Documentación
+
+- **NO crear múltiples archivos de guía** - Consolidar toda la documentación en el README.md
+- Las nuevas funcionalidades deben documentarse en el README.md en la sección correspondiente
+- Solo crear archivos de documentación separados si son absolutamente necesarios (ej: configuración de despliegue)
+
+## Comentarios y Logging
+
+- **NO agregar comentarios** a menos que:
+  - El usuario lo solicite explícitamente
+  - Sea necesario para debugging activo
+  - Explique lógica compleja que no es obvia del código
+
+- **NO agregar console.log/console.error/console.warn** a menos que:
+  - El usuario lo solicite explícitamente
+  - Sea necesario para debugging activo
+  - Sea un error crítico que requiere logging estructurado (usar el logger en `lib/logger.ts`)
+
+- Para logging estructurado, usar siempre `lib/logger.ts` en lugar de console.log
+
+## Arquitectura y Código
+
+- Sigue principios SOLID
+- Usa TypeScript con tipos estrictos
+- Evita código duplicado - extrae funciones reutilizables
+- Usa async/await en lugar de callbacks
+- Maneja errores apropiadamente con try/catch
+- Valida inputs con Zod schemas
+- Usa el sistema de logging estructurado (`lib/logger.ts`) para producción
+
+## Estructura del Proyecto
+
+- Mantén la estructura de carpetas establecida:
+  - `app/` - Rutas y páginas (Next.js App Router)
+  - `components/` - Componentes React reutilizables
+  - `lib/` - Utilidades y helpers
+  - `prisma/` - Schema de base de datos
+  - `types/` - TypeScript types
+
+## Testing
+
+- Escribe tests para nuevas funcionalidades críticas
+- Usa Vitest para tests unitarios
+- Mockea dependencias externas (Prisma, APIs, etc.)
+- Mantén tests rápidos y aislados
+
+## Seguridad
+
+- Valida y sanitiza todos los inputs
+- Usa autenticación y autorización apropiadas
+- No expongas información sensible en logs
+- Sigue las mejores prácticas de Next.js y Prisma
+
+## Performance
+
+- Optimiza queries de base de datos
+- Usa Server Components cuando sea posible
+- Implementa paginación para listas grandes
+- Evita re-renders innecesarios en componentes
+

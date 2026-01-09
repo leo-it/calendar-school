@@ -6,22 +6,16 @@ import Groq from 'groq-sdk'
 
 export const dynamic = 'force-dynamic'
 
-// Inicializar Groq (gratis y confiable)
 const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY || '',
 })
 
-// ==================== MEDIDAS DE SEGURIDAD ====================
-
-// Límites de seguridad
 const MAX_MESSAGE_LENGTH = 2000
 const MAX_HISTORY_MESSAGES = 20
 const MAX_CONTEXT_LENGTH = 10000
 const MAX_RESPONSE_LENGTH = 4000
 const RATE_LIMIT_REQUESTS = 15
-const RATE_LIMIT_WINDOW = 60 * 1000 // 60 segundos en milisegundos
-
-// Rate limiting en memoria (en producción usar Redis)
+const RATE_LIMIT_WINDOW = 60 * 1000
 interface RateLimitEntry {
   count: number
   resetTime: number
@@ -29,7 +23,6 @@ interface RateLimitEntry {
 
 const rateLimitStore = new Map<string, RateLimitEntry>()
 
-// Limpiar entradas expiradas periódicamente
 setInterval(() => {
   const now = Date.now()
   const keysToDelete: string[] = []
@@ -39,12 +32,10 @@ setInterval(() => {
     }
   })
   keysToDelete.forEach(key => rateLimitStore.delete(key))
-}, 60000) // Limpiar cada minuto
+}, 60000)
 
-// Función para sanitizar strings
 function sanitizeString(input: string): string {
   if (typeof input !== 'string') return ''
-  
   return input
     .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
     .replace(/javascript:/gi, '')
@@ -60,7 +51,6 @@ function sanitizeString(input: string): string {
     .trim()
 }
 
-// Función para detectar patrones maliciosos
 function detectMaliciousPatterns(input: string): boolean {
   if (typeof input !== 'string') return true
   
@@ -87,21 +77,16 @@ function detectMaliciousPatterns(input: string): boolean {
   return maliciousPatterns.some(pattern => pattern.test(input))
 }
 
-// Función para validar y sanitizar mensaje
 function validateAndSanitizeMessage(message: any): { valid: boolean; sanitized?: string; error?: string } {
-  // Validar tipo
   if (typeof message !== 'string') {
     return { valid: false, error: 'El mensaje debe ser una cadena de texto' }
   }
   
-  // Validar longitud
   if (message.length > MAX_MESSAGE_LENGTH) {
     return { valid: false, error: `El mensaje no puede exceder ${MAX_MESSAGE_LENGTH} caracteres` }
   }
   
-  // Detectar patrones maliciosos
   if (detectMaliciousPatterns(message)) {
-    console.warn('⚠️ Intento de inyección detectado:', message.substring(0, 100))
     return { valid: false, error: 'El mensaje contiene contenido no permitido' }
   }
   
@@ -280,7 +265,6 @@ async function obtenerContextoGeneral() {
       totalEscuelas: escuelas.length,
     }
   } catch (error) {
-    console.error('Error al obtener contexto general:', error)
     return { error: 'Error al obtener contexto general' }
   }
 }
@@ -443,7 +427,6 @@ async function obtenerContextoUsuario(userId: string) {
       totalInscripciones: inscripcionesFormateadas.length,
     }
   } catch (error) {
-    console.error('Error al obtener contexto:', error)
     return { error: 'Error al obtener contexto del usuario' }
   }
 }
@@ -455,19 +438,12 @@ async function generarRespuestaConGroq(
   conversationHistory: any[]
 ): Promise<string> {
   try {
-    console.log('🔄 Iniciando llamada a Groq...')
-    console.log('📝 Mensaje:', message.substring(0, 100))
-    console.log('📚 Historial:', conversationHistory?.length || 0, 'mensajes')
-    
-    // Construir mensajes para Groq (formato similar a OpenAI)
     const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
       {
         role: 'system',
         content: systemPrompt,
       },
     ]
-
-    // Agregar historial de conversación
     if (conversationHistory && Array.isArray(conversationHistory)) {
       conversationHistory
         .filter((msg: { role: string; content: string }) => msg.role === 'user' || msg.role === 'assistant')
@@ -478,62 +454,43 @@ async function generarRespuestaConGroq(
           })
         })
     }
-
-    // Agregar el mensaje actual
     messages.push({
       role: 'user',
       content: message,
     })
 
-    console.log('📤 Enviando', messages.length, 'mensajes a Groq...')
-
-    // Llamar a Groq API
-    // Modelos disponibles actualmente: llama-3.3-70b-versatile, llama-3.1-8b-instant, mixtral-8x7b-32768
     const completion = await groq.chat.completions.create({
-      model: 'llama-3.3-70b-versatile', // Modelo más potente y actualizado (gratis)
+      model: 'llama-3.3-70b-versatile',
       messages: messages as any,
       temperature: 0.7,
       max_tokens: 2000,
     })
 
-    console.log('✅ Respuesta recibida de Groq')
-
     const response = completion.choices[0]?.message?.content
     if (!response) {
-      console.error('❌ No se recibió contenido en la respuesta:', completion)
       throw new Error('No se recibió respuesta de Groq')
     }
 
-    console.log('📥 Respuesta (primeros 100 chars):', response.substring(0, 100))
     return response
   } catch (error: any) {
-    console.error('❌ Error en generarRespuestaConGroq:', error)
-    console.error('Error completo:', JSON.stringify(error, null, 2))
-    
     const errorMessage = error.message || 'Error desconocido'
     const errorStatus = error.status || error.statusCode || error.response?.status
 
-    // Si es un error de autenticación
     if (errorStatus === 401 || errorMessage.includes('API key') || errorMessage.includes('unauthorized') || errorMessage.includes('authentication')) {
       throw new Error(`API key de Groq inválida. Verifica que GROQ_API_KEY esté correctamente configurada. Error: ${errorMessage}`)
     }
 
-    // Si es un error de rate limit
     if (errorStatus === 429 || errorMessage.includes('rate limit') || errorMessage.includes('quota')) {
       throw new Error(`Límite de uso alcanzado. Por favor, intenta más tarde.`)
     }
 
-    // Re-lanzar el error con más información
     throw new Error(`Error al llamar a Groq: ${errorMessage} (Status: ${errorStatus || 'N/A'})`)
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    // Verificar que la API key de Groq esté configurada
     if (!process.env.GROQ_API_KEY || process.env.GROQ_API_KEY.trim() === '') {
-      console.error('GROQ_API_KEY no está configurada o está vacía')
-      console.error('Variables de entorno disponibles:', Object.keys(process.env).filter(k => k.includes('GROQ') || k.includes('GEMINI')))
       return NextResponse.json(
         { 
           error: 'Error de configuración: API key de Groq no configurada',
@@ -544,8 +501,6 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       )
     }
-
-    console.log('✅ GROQ_API_KEY configurada (longitud:', process.env.GROQ_API_KEY.length, ')')
 
     const session = await getServerSession(authOptions)
     
@@ -712,13 +667,10 @@ IMPORTANTE:
     // Truncar contexto si es muy largo
     systemPrompt = truncateContext(systemPrompt)
 
-    // Usar Groq (gratis y confiable)
     let text: string | null = null
     try {
       text = await generarRespuestaConGroq(systemPrompt, sanitizedMessage, sanitizedHistory)
-      console.log('Groq respondió correctamente')
     } catch (error: any) {
-      console.error('Error con Groq:', error.message)
       throw error
     }
 
@@ -745,10 +697,6 @@ IMPORTANTE:
       }
     })
   } catch (error: any) {
-    console.error('Error en chat de IA:', error)
-    console.error('Stack trace:', error.stack)
-    
-    // Manejar errores específicos de Groq
     if (error.message?.includes('API_KEY') || error.message?.includes('API key') || error.status === 401) {
       return NextResponse.json(
         { 
