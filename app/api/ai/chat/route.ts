@@ -7,9 +7,13 @@ import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 
-const groq = new Groq({
-  apiKey: process.env.GROQ_API_KEY || '',
-})
+function getGroqClient() {
+  const apiKey = (process.env.GROQ_API_KEY || '').trim()
+  if (!apiKey) {
+    throw new Error('GROQ_API_KEY no está configurada')
+  }
+  return new Groq({ apiKey })
+}
 
 const MAX_MESSAGE_LENGTH = 2000
 const MAX_HISTORY_MESSAGES = 20
@@ -460,6 +464,7 @@ async function generarRespuestaConGroq(
       content: message,
     })
 
+    const groq = getGroqClient()
     const completion = await groq.chat.completions.create({
       model: 'llama-3.3-70b-versatile',
       messages: messages as any,
@@ -494,16 +499,37 @@ export async function POST(request: NextRequest) {
   const startTime = Date.now()
   
   try {
-    logger.info('Iniciando solicitud de chat', { requestId, action: 'chat_request_start' })
+    const groqApiKey = process.env.GROQ_API_KEY
+    const hasGroqApiKey = !!groqApiKey
+    const groqApiKeyLength = groqApiKey?.length || 0
+    const groqApiKeyTrimmed = groqApiKey?.trim() || ''
+    const isEmpty = groqApiKeyTrimmed === ''
     
-    if (!process.env.GROQ_API_KEY || process.env.GROQ_API_KEY.trim() === '') {
-      logger.error('GROQ_API_KEY no configurada', undefined, { requestId, action: 'chat_config_error' })
+    logger.info('Iniciando solicitud de chat', { 
+      requestId, 
+      action: 'chat_request_start',
+      hasGroqApiKey,
+      groqApiKeyLength,
+      isEmpty,
+      nodeEnv: process.env.NODE_ENV,
+      allEnvKeys: Object.keys(process.env).filter(k => k.includes('GROQ') || k.includes('API')).join(', ')
+    })
+    
+    if (!hasGroqApiKey || isEmpty) {
+      logger.error('GROQ_API_KEY no configurada', undefined, { 
+        requestId, 
+        action: 'chat_config_error',
+        hasGroqApiKey,
+        groqApiKeyLength,
+        isEmpty,
+        allEnvKeys: Object.keys(process.env).filter(k => k.includes('GROQ') || k.includes('API')).join(', ')
+      })
       return NextResponse.json(
         { 
           error: 'Error de configuración: API key de Groq no configurada',
           details: process.env.NODE_ENV === 'development' 
             ? 'GROQ_API_KEY no está configurada en las variables de entorno. Obtén una API key gratis en https://console.groq.com' 
-            : undefined
+            : 'Verifica que GROQ_API_KEY esté configurada en Railway y haz redeploy.'
         },
         { status: 500 }
       )
