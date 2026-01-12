@@ -417,6 +417,111 @@ Ver [DESPLIEGUE.md](./DESPLIEGUE.md) para más detalles.
 - [ ] **Funcionalidad de cambio de contraseña** - Permitir a los usuarios cambiar su contraseña desde su perfil
 - [ ] **Implementar uso de cookies** - Evaluar casos de uso para cookies (preferencias de usuario, sesiones, etc.)
 
+## 🔐 Sistema de Recuperación y Cambio de Contraseña (Planificado)
+
+### Objetivo
+
+Implementar funcionalidad completa para que los usuarios puedan recuperar su contraseña olvidada y cambiar su contraseña desde su perfil.
+
+### Requisitos Técnicos
+
+#### 1. Base de Datos
+- Agregar campos al modelo `User` en Prisma:
+  - `resetPasswordToken`: String? (token único para recuperación)
+  - `resetPasswordExpires`: DateTime? (expiración del token, 1-2 horas)
+  - `passwordResetAttempts`: Int @default(0) (contador de intentos de recuperación)
+  - `passwordResetLastAttempt`: DateTime? (último intento de recuperación)
+  - `passwordChangeAttempts`: Int @default(0) (contador de intentos de cambio)
+  - `passwordChangeLastAttempt`: DateTime? (último intento de cambio)
+
+#### 2. Sistema de Email (Opciones Gratuitas)
+
+**Opción A: Resend (Recomendado)**
+- ✅ Plan gratuito: 3,000 emails/mes
+- ✅ API simple y moderna
+- ✅ Configuración rápida
+- Variables de entorno:
+  ```env
+  RESEND_API_KEY=re_xxxxx
+  RESEND_FROM_EMAIL=noreply@tu-dominio.com
+  ```
+
+**Opción B: Nodemailer con Gmail**
+- ✅ Gratis con cuenta Gmail personal
+- ⚠️ Requiere "Contraseña de aplicación" de Google
+- Variables de entorno:
+  ```env
+  SMTP_HOST=smtp.gmail.com
+  SMTP_PORT=587
+  SMTP_USER=tu-email@gmail.com
+  SMTP_PASSWORD=tu-app-password
+  ```
+
+**Opción C: SendGrid**
+- ✅ Plan gratuito: 100 emails/día
+- Variables de entorno:
+  ```env
+  SENDGRID_API_KEY=SG.xxxxx
+  SENDGRID_FROM_EMAIL=noreply@tu-dominio.com
+  ```
+
+#### 3. Endpoints API Necesarios
+
+- `/api/auth/forgot-password` (POST) - Solicitar recuperación
+- `/api/auth/reset-password` (POST) - Restablecer con token
+- `/api/auth/change-password` (POST) - Cambiar desde perfil (requiere autenticación)
+
+#### 4. Páginas UI
+
+- `/forgot-password` - Formulario para solicitar recuperación
+- `/reset-password?token=...` - Formulario para restablecer contraseña
+- Componente en perfil para cambio de contraseña (usuarios autenticados)
+
+#### 5. Validaciones y Seguridad
+
+- Schemas Zod para validar inputs
+- Tokens únicos y seguros (crypto.randomBytes)
+- Expiración de tokens (1-2 horas)
+- **Rate limiting: máximo 3 intentos por día** para:
+  - Recuperación de contraseña (`/api/auth/forgot-password`)
+  - Cambio de contraseña (`/api/auth/change-password`)
+- Implementación del rate limiting:
+  - Contador de intentos en base de datos por usuario
+  - Reset diario del contador (verificar fecha del último intento)
+  - Bloquear después de 3 intentos fallidos en 24 horas
+- Invalidar token después de uso
+- Validar fortaleza de nueva contraseña
+- No exponer si el email existe (evitar enumeración)
+
+#### 6. Dependencias a Instalar
+
+```bash
+# Si usas Resend (recomendado)
+npm install resend
+
+# Si usas Nodemailer con Gmail
+npm install nodemailer
+npm install --save-dev @types/nodemailer
+
+# Si usas SendGrid
+npm install @sendgrid/mail
+```
+
+### Archivos a Crear/Modificar
+
+1. **Modificar**: `prisma/schema.prisma` (agregar campos de token)
+2. **Crear**: `app/api/auth/forgot-password/route.ts`
+3. **Crear**: `app/api/auth/reset-password/route.ts`
+4. **Crear**: `app/api/auth/change-password/route.ts`
+5. **Crear**: `app/forgot-password/page.tsx`
+6. **Crear**: `app/reset-password/page.tsx`
+7. **Modificar**: `lib/notificaciones.ts` (implementar `enviarEmail` con servicio elegido)
+8. **Modificar**: `lib/validations/auth.schema.ts` (agregar schemas de validación)
+
+### Recomendación
+
+**Usar Resend** por su simplicidad, plan gratuito generoso (3,000 emails/mes) y API moderna. Es ideal para proyectos que no requieren volúmenes masivos de emails.
+
 ## 💳 Sistema de Membresía (Planificado)
 
 ### Objetivo
