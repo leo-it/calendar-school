@@ -31,9 +31,21 @@ export default function RegistroForm({ escuelaSlug }: RegistroFormProps) {
   const [nombreEscuelaBuscado, setNombreEscuelaBuscado] = useState('')
   const [buscandoEscuela, setBuscandoEscuela] = useState(false)
   const [error, setError] = useState('')
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({})
   const [loading, setLoading] = useState(false)
   const [loadingEscuelas, setLoadingEscuelas] = useState(true)
   const [debounceTimer, setDebounceTimer] = useState<NodeJS.Timeout | null>(null)
+
+  // Función helper para limpiar errores de un campo cuando el usuario edita
+  const clearFieldError = (fieldName: string) => {
+    if (fieldErrors[fieldName]) {
+      setFieldErrors(prev => {
+        const newErrors = { ...prev }
+        delete newErrors[fieldName]
+        return newErrors
+      })
+    }
+  }
 
   // Cargar escuelas disponibles y buscar por slug si viene en la URL
   useEffect(() => {
@@ -93,6 +105,7 @@ export default function RegistroForm({ escuelaSlug }: RegistroFormProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
+    setFieldErrors({})
     setLoading(true)
 
     // Validaciones
@@ -161,8 +174,34 @@ export default function RegistroForm({ escuelaSlug }: RegistroFormProps) {
 
       if (!response.ok) {
         const errorMessage = data.error || 'Error al registrar usuario'
-        const errorDetails = data.details ? ` (${data.details})` : ''
-        setError(errorMessage + errorDetails)
+        
+        // Procesar errores de validación por campo
+        if (data.details && Array.isArray(data.details)) {
+          const errorsByField: Record<string, string[]> = {}
+          
+          data.details.forEach((detail: any) => {
+            const field = detail.path?.[0] || 'general'
+            const message = detail.message || 'Error de validación'
+            
+            if (!errorsByField[field]) {
+              errorsByField[field] = []
+            }
+            errorsByField[field].push(message)
+          })
+          
+          setFieldErrors(errorsByField)
+          
+          // Mostrar mensaje general si hay errores
+          const allErrorMessages = Object.values(errorsByField).flat()
+          if (allErrorMessages.length > 0) {
+            setError(errorMessage)
+          } else {
+            setError(errorMessage)
+          }
+        } else {
+          setError(errorMessage)
+        }
+        
         setLoading(false)
         return
       }
@@ -198,11 +237,25 @@ export default function RegistroForm({ escuelaSlug }: RegistroFormProps) {
               id="name"
               type="text"
               value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              onChange={(e) => {
+                setFormData({ ...formData, name: e.target.value })
+                clearFieldError('name')
+              }}
               required
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900"
+              className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900 ${
+                fieldErrors.name ? 'border-red-300' : 'border-gray-300'
+              }`}
               placeholder="Tu nombre"
             />
+            {fieldErrors.name && (
+              <div className="mt-1 space-y-1">
+                {fieldErrors.name.map((err, idx) => (
+                  <p key={idx} className="text-xs text-red-600">
+                    • {err}
+                  </p>
+                ))}
+              </div>
+            )}
           </div>
 
           <div>
@@ -227,10 +280,24 @@ export default function RegistroForm({ escuelaSlug }: RegistroFormProps) {
               id="dni"
               type="text"
               value={formData.dni}
-              onChange={(e) => setFormData({ ...formData, dni: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900"
+              onChange={(e) => {
+                setFormData({ ...formData, dni: e.target.value })
+                clearFieldError('dni')
+              }}
+              className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900 ${
+                fieldErrors.dni ? 'border-red-300' : 'border-gray-300'
+              }`}
               placeholder="DNI"
             />
+            {fieldErrors.dni && (
+              <div className="mt-1 space-y-1">
+                {fieldErrors.dni.map((err, idx) => (
+                  <p key={idx} className="text-xs text-red-600">
+                    • {err}
+                  </p>
+                ))}
+              </div>
+            )}
           </div>
 
           <div>
@@ -241,11 +308,25 @@ export default function RegistroForm({ escuelaSlug }: RegistroFormProps) {
               id="email"
               type="email"
               value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              onChange={(e) => {
+                setFormData({ ...formData, email: e.target.value })
+                clearFieldError('email')
+              }}
               required
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900"
+              className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900 ${
+                fieldErrors.email ? 'border-red-300' : 'border-gray-300'
+              }`}
               placeholder="tu@email.com"
             />
+            {fieldErrors.email && (
+              <div className="mt-1 space-y-1">
+                {fieldErrors.email.map((err, idx) => (
+                  <p key={idx} className="text-xs text-red-600">
+                    • {err}
+                  </p>
+                ))}
+              </div>
+            )}
           </div>
 
           <div>
@@ -256,10 +337,24 @@ export default function RegistroForm({ escuelaSlug }: RegistroFormProps) {
               id="phone"
               type="tel"
               value={formData.phone}
-              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900"
+              onChange={(e) => {
+                setFormData({ ...formData, phone: e.target.value })
+                clearFieldError('phone')
+              }}
+              className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900 ${
+                fieldErrors.phone ? 'border-red-300' : 'border-gray-300'
+              }`}
               placeholder="+5491112345678"
             />
+            {fieldErrors.phone && (
+              <div className="mt-1 space-y-1">
+                {fieldErrors.phone.map((err, idx) => (
+                  <p key={idx} className="text-xs text-red-600">
+                    • {err}
+                  </p>
+                ))}
+              </div>
+            )}
           </div>
 
           <div>
@@ -463,11 +558,30 @@ export default function RegistroForm({ escuelaSlug }: RegistroFormProps) {
               id="password"
               type="password"
               value={formData.password}
-              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+              onChange={(e) => {
+                setFormData({ ...formData, password: e.target.value })
+                clearFieldError('password')
+              }}
               required
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900"
+              className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900 ${
+                fieldErrors.password ? 'border-red-300' : 'border-gray-300'
+              }`}
               placeholder="••••••••"
             />
+            {fieldErrors.password && (
+              <div className="mt-1 space-y-1">
+                {fieldErrors.password.map((err, idx) => (
+                  <p key={idx} className="text-xs text-red-600">
+                    • {err}
+                  </p>
+                ))}
+              </div>
+            )}
+            {!fieldErrors.password && (
+              <p className="text-xs text-gray-500 mt-1">
+                Mínimo 8 caracteres, debe incluir mayúscula, minúscula y número
+              </p>
+            )}
           </div>
 
           <div>
@@ -478,16 +592,28 @@ export default function RegistroForm({ escuelaSlug }: RegistroFormProps) {
               id="confirmPassword"
               type="password"
               value={formData.confirmPassword}
-              onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+              onChange={(e) => {
+                setFormData({ ...formData, confirmPassword: e.target.value })
+                // Limpiar error general si existe cuando el usuario edita
+                if (error && error.includes('contraseñas no coinciden')) {
+                  setError('')
+                }
+              }}
               required
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900"
               placeholder="••••••••"
             />
           </div>
 
-          {error && (
+          {error && Object.keys(fieldErrors).length === 0 && (
             <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
               {error}
+            </div>
+          )}
+          {error && Object.keys(fieldErrors).length > 0 && (
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+              <p className="font-medium mb-2">{error}</p>
+              <p className="text-sm">Por favor, corrige los errores indicados en los campos del formulario.</p>
             </div>
           )}
 
