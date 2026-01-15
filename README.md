@@ -847,6 +847,594 @@ El proyecto incluye un pipeline de CI/CD con GitHub Actions que:
 
 Ver: `.github/workflows/ci-cd.yml`
 
+## 📊 Consultar Datos en Producción
+
+### Acceder a la Base de Datos
+
+#### Opción 1: Railway.app
+
+1. **Desde el Dashboard de Railway:**
+   - Ve a tu servicio PostgreSQL
+   - Click en la pestaña **"Data"** o **"Connect"**
+   - Railway proporciona una interfaz web para ejecutar queries SQL
+
+2. **Desde Railway CLI:**
+   ```bash
+   # Instalar Railway CLI
+   npm i -g @railway/cli
+   
+   # Login
+   railway login
+   
+   # Conectar a la base de datos
+   railway connect
+   ```
+
+3. **Desde tu máquina local (usando psql):**
+   ```bash
+   # Obtener DATABASE_URL desde Railway
+   # Ve a PostgreSQL service → Variables → DATABASE_URL
+   
+   # Conectar directamente
+   psql $DATABASE_URL
+   ```
+
+#### Opción 2: Render.com
+
+1. **Desde el Dashboard:**
+   - Ve a tu servicio PostgreSQL
+   - Click en **"Connect"** o **"Info"**
+   - Render muestra la información de conexión
+
+2. **Desde tu máquina local:**
+   ```bash
+   # Obtener DATABASE_URL desde Render
+   # Ve a PostgreSQL service → Info → Internal Database URL
+   
+   # Conectar directamente
+   psql $DATABASE_URL
+   ```
+
+#### Opción 3: Docker (si estás usando Docker Compose en producción)
+
+```bash
+# Conectar al contenedor de PostgreSQL
+docker compose exec postgres psql -U almanaque -d almanaque
+```
+
+### Consultas SQL Útiles
+
+Una vez conectado a la base de datos, puedes ejecutar estas consultas:
+
+#### Contar Escuelas Registradas
+
+```sql
+-- Total de escuelas
+SELECT COUNT(*) as total_escuelas FROM "Escuela";
+
+-- Escuelas activas vs inactivas
+SELECT 
+  activa,
+  COUNT(*) as cantidad
+FROM "Escuela"
+GROUP BY activa;
+
+-- Escuelas con detalles
+SELECT 
+  id,
+  nombre,
+  direccion,
+  telefono,
+  email,
+  activa,
+  "createdAt"
+FROM "Escuela"
+ORDER BY "createdAt" DESC;
+```
+
+#### Ver Profesores
+
+```sql
+-- Total de profesores
+SELECT COUNT(*) as total_profesores FROM "Profesor";
+
+-- Lista completa de profesores
+SELECT 
+  id,
+  name,
+  email,
+  phone,
+  dni,
+  "createdAt"
+FROM "Profesor"
+ORDER BY name ASC;
+
+-- Profesores con cantidad de clases
+SELECT 
+  p.id,
+  p.name,
+  p.email,
+  COUNT(c.id) as total_clases
+FROM "Profesor" p
+LEFT JOIN "Clase" c ON c."profesorId" = p.id
+GROUP BY p.id, p.name, p.email
+ORDER BY total_clases DESC;
+
+-- ⚠️ IMPORTANTE: Profesores por escuela (relación indirecta a través de Clase)
+-- Profesores que tienen clases en una escuela específica
+SELECT DISTINCT
+  p.id,
+  p.name,
+  p.email,
+  p.phone,
+  COUNT(c.id) as total_clases_en_escuela
+FROM "Profesor" p
+INNER JOIN "Clase" c ON c."profesorId" = p.id
+WHERE c."escuelaId" = 'ID_DE_LA_ESCUELA_AQUI'
+GROUP BY p.id, p.name, p.email, p.phone
+ORDER BY p.name;
+
+-- Todas las escuelas con sus profesores (relación indirecta)
+SELECT 
+  e.id as escuela_id,
+  e.nombre as escuela_nombre,
+  p.id as profesor_id,
+  p.name as profesor_nombre,
+  p.email as profesor_email,
+  COUNT(DISTINCT c.id) as clases_del_profesor
+FROM "Escuela" e
+INNER JOIN "Clase" c ON c."escuelaId" = e.id
+INNER JOIN "Profesor" p ON p.id = c."profesorId"
+GROUP BY e.id, e.nombre, p.id, p.name, p.email
+ORDER BY e.nombre, p.name;
+
+-- Profesores sin clases asignadas (huérfanos)
+SELECT 
+  p.id,
+  p.name,
+  p.email,
+  p."createdAt"
+FROM "Profesor" p
+LEFT JOIN "Clase" c ON c."profesorId" = p.id
+WHERE c.id IS NULL;
+```
+
+#### Estadísticas Generales
+
+```sql
+-- Resumen completo del sistema
+SELECT 
+  (SELECT COUNT(*) FROM "Escuela") as total_escuelas,
+  (SELECT COUNT(*) FROM "Escuela" WHERE activa = true) as escuelas_activas,
+  (SELECT COUNT(*) FROM "Profesor") as total_profesores,
+  (SELECT COUNT(*) FROM "Clase") as total_clases,
+  (SELECT COUNT(*) FROM "Clase" WHERE activa = true) as clases_activas,
+  (SELECT COUNT(*) FROM "User") as total_usuarios,
+  (SELECT COUNT(*) FROM "User" WHERE role = 'ESTUDIANTE') as estudiantes,
+  (SELECT COUNT(*) FROM "User" WHERE role = 'PROFESOR') as profesores_usuarios,
+  (SELECT COUNT(*) FROM "User" WHERE role = 'ADMIN') as admins,
+  (SELECT COUNT(*) FROM "ClaseSubscription") as total_inscripciones;
+```
+
+#### Usuarios por Escuela
+
+```sql
+-- Cantidad de usuarios por escuela
+SELECT 
+  e.nombre as escuela,
+  COUNT(u.id) as total_usuarios,
+  COUNT(CASE WHEN u.role = 'ESTUDIANTE' THEN 1 END) as estudiantes,
+  COUNT(CASE WHEN u.role = 'PROFESOR' THEN 1 END) as profesores
+FROM "Escuela" e
+LEFT JOIN "User" u ON u."escuelaId" = e.id
+GROUP BY e.id, e.nombre
+ORDER BY total_usuarios DESC;
+```
+
+#### Clases por Escuela
+
+```sql
+-- Clases agrupadas por escuela
+SELECT 
+  e.nombre as escuela,
+  COUNT(c.id) as total_clases,
+  COUNT(CASE WHEN c.activa = true THEN 1 END) as clases_activas
+FROM "Escuela" e
+LEFT JOIN "Clase" c ON c."escuelaId" = e.id
+GROUP BY e.id, e.nombre
+ORDER BY total_clases DESC;
+```
+
+### Revisar Logs en Producción
+
+#### Railway.app
+
+1. **Desde el Dashboard:**
+   - Ve a tu servicio de la aplicación
+   - Click en la pestaña **"Deployments"** o **"Logs"**
+   - Los logs se muestran en tiempo real
+
+2. **Filtrar logs por tipo:**
+   - Los logs están en formato JSON estructurado
+   - Busca por `"type": "business"` para operaciones de negocio
+   - Busca por `"action": "registro_escuela"` para registros de escuelas
+   - Busca por `"action": "crear_profesor"` para creación de profesores
+
+#### Render.com
+
+1. **Desde el Dashboard:**
+   - Ve a tu servicio
+   - Click en **"Logs"**
+   - Los logs se muestran en tiempo real
+
+2. **Exportar logs:**
+   - Render permite descargar logs en formato texto
+   - Puedes filtrarlos localmente usando `grep` o `jq` (para JSON)
+
+#### Ejemplo de Búsqueda en Logs
+
+Si los logs están en formato JSON, puedes usar `jq` para filtrarlos:
+
+```bash
+# Buscar registros de escuelas
+railway logs | jq 'select(.context.action == "registro_escuela")'
+
+# Buscar creación de profesores
+railway logs | jq 'select(.context.action == "crear_profesor")'
+
+# Contar escuelas registradas (desde logs)
+railway logs | jq 'select(.context.action == "registro_escuela")' | wc -l
+```
+
+### Usar Prisma Studio en Producción (No Recomendado)
+
+⚠️ **Advertencia**: Prisma Studio no está diseñado para producción y puede ser inseguro. Solo úsalo en desarrollo.
+
+Si necesitas una interfaz visual en producción, considera:
+- Usar herramientas como **pgAdmin** o **DBeaver** conectadas a tu base de datos
+- Crear endpoints de API protegidos para consultas específicas
+- Usar el panel de administración web en `/admin` (solo para usuarios ADMIN)
+
+### ⚠️ Importante: Relaciones Indirectas en la Base de Datos
+
+**Problema identificado**: Al revisar la base de datos directamente, las relaciones no siempre son obvias a simple vista.
+
+#### Relaciones Actuales
+
+1. **Alumnos (User) → Escuela**: ✅ **Relación directa**
+   - Campo `escuelaId` en la tabla `User`
+   - Fácil de consultar: `SELECT * FROM "User" WHERE "escuelaId" = 'xxx'`
+
+2. **Profesores → Escuela**: ❌ **Relación indirecta**
+   - Los profesores NO tienen `escuelaId` directo
+   - Se relacionan con escuelas **a través de las clases** (`Clase` tiene `profesorId` y `escuelaId`)
+   - Para saber qué profesores pertenecen a una escuela, hay que hacer JOIN a través de `Clase`
+
+#### Consultas SQL para Relaciones Indirectas
+
+**Profesores de una escuela específica:**
+```sql
+-- Profesores que tienen clases en una escuela
+SELECT DISTINCT
+  p.id,
+  p.name,
+  p.email,
+  p.phone,
+  COUNT(c.id) as total_clases
+FROM "Profesor" p
+INNER JOIN "Clase" c ON c."profesorId" = p.id
+WHERE c."escuelaId" = 'ID_DE_LA_ESCUELA'
+GROUP BY p.id, p.name, p.email, p.phone;
+```
+
+**Todas las escuelas con sus profesores:**
+```sql
+-- Escuelas con lista de profesores (a través de clases)
+SELECT 
+  e.id as escuela_id,
+  e.nombre as escuela_nombre,
+  p.id as profesor_id,
+  p.name as profesor_nombre,
+  p.email as profesor_email,
+  COUNT(DISTINCT c.id) as clases_del_profesor
+FROM "Escuela" e
+INNER JOIN "Clase" c ON c."escuelaId" = e.id
+INNER JOIN "Profesor" p ON p.id = c."profesorId"
+GROUP BY e.id, e.nombre, p.id, p.name, p.email
+ORDER BY e.nombre, p.name;
+```
+
+**Profesores sin clases (huérfanos):**
+```sql
+-- Profesores que no tienen clases asignadas
+SELECT 
+  p.id,
+  p.name,
+  p.email,
+  p."createdAt"
+FROM "Profesor" p
+LEFT JOIN "Clase" c ON c."profesorId" = p.id
+WHERE c.id IS NULL;
+```
+
+## 📚 Lecciones Aprendidas y Mejores Prácticas para Futuros Proyectos
+
+### 1. Diseño de Base de Datos
+
+#### ✅ Relaciones Directas vs Indirectas
+
+**Problema encontrado**: Profesores no tienen relación directa con escuelas, solo a través de clases.
+
+**Lección aprendida**:
+- **Considera relaciones directas** cuando la entidad "pertenece" claramente a otra
+- **Relaciones indirectas** son útiles para relaciones "muchos a muchos", pero dificultan consultas simples
+- **Documenta las relaciones indirectas** claramente en el schema y README
+
+**Recomendación para futuros proyectos**:
+```prisma
+// Si un profesor puede pertenecer a múltiples escuelas (muchos a muchos)
+model ProfesorEscuela {
+  id         String   @id @default(cuid())
+  profesorId String
+  escuelaId  String
+  activo     Boolean  @default(true)
+  
+  profesor Profesor @relation(fields: [profesorId], references: [id])
+  escuela  Escuela  @relation(fields: [escuelaId], references: [id])
+  
+  @@unique([profesorId, escuelaId])
+}
+
+// O si un profesor pertenece a UNA escuela (uno a muchos)
+model Profesor {
+  // ...
+  escuelaId String?
+  escuela   Escuela? @relation(fields: [escuelaId], references: [id])
+}
+```
+
+#### ✅ Documentar el Modelo de Datos
+
+**Lección aprendida**: Agregar al README:
+- Diagrama de relaciones (o descripción textual)
+- Consultas SQL comunes para relaciones indirectas
+- Ejemplos de cómo obtener datos relacionados
+
+### 2. Nombres de Tablas y Campos
+
+#### ✅ Consistencia en Nombres
+
+**Problema encontrado**: Mezcla de español e inglés en nombres de modelos. 
+
+**Lección aprendida**:
+- **Decide un idioma** y sé consistente (español o inglés)
+- Si usas español, usa español en TODO (modelos, campos, comentarios)
+- Si usas inglés, usa inglés en TODO
+- **Documenta la decisión** en el README
+
+-proxima vez todo el codigo en ingles y los textos en un i18n
+**Recomendación**: Para proyectos en español, usar español en modelos pero inglés en código:
+```prisma
+model Escuela {  // Modelo en español
+  nombre String  // Campo en español
+}
+
+// Pero en código TypeScript:
+const escuela = await prisma.escuela.findMany()  // Tabla en minúsculas
+```
+
+### 3. Índices y Performance
+
+#### ✅ Índices para Consultas Frecuentes
+
+**Lección aprendida**: Agregar índices desde el inicio para:
+- Campos usados en WHERE frecuentemente
+- Campos usados en JOIN
+- Campos usados en ORDER BY
+- Combinaciones de campos usados juntos
+
+**Ejemplo del proyecto actual**:
+```prisma
+@@index([escuelaId, role])  // Para filtrar usuarios por escuela y rol
+@@index([escuelaId, activa])  // Para filtrar clases activas por escuela
+```
+
+### 4. Validación y Seguridad
+
+#### ✅ Validación en Múltiples Capas
+
+**Lección aprendida**: Validar en:
+1. **Frontend** (UX inmediata)
+2. **API** con Zod schemas (seguridad)
+3. **Base de datos** con constraints (última línea de defensa)
+
+**Recomendación**: Usar Zod para todas las validaciones de API:
+```typescript
+const schema = z.object({
+  email: z.string().email(),
+  nombre: z.string().min(1).max(100),
+})
+```
+
+### 5. Logging y Observabilidad
+
+#### ✅ Logging Estructurado desde el Inicio
+
+**Lección aprendida**: Implementar logging estructurado (JSON) desde el principio:
+- Facilita debugging en producción
+- Permite análisis con herramientas como Kibana/ELK
+- Incluye contexto relevante (userId, requestId, etc.)
+
+**Recomendación**: Usar un logger centralizado:
+```typescript
+// lib/logger.ts
+logger.info('Operación realizada', {
+  type: 'business',
+  action: 'crear_clase',
+  userId: user.id,
+  entityId: clase.id
+})
+```
+
+### 6. Manejo de Errores
+
+#### ✅ Errores Informativos pero Seguros
+
+**Lección aprendida**:
+- **En desarrollo**: Mostrar detalles completos del error
+- **En producción**: Mostrar mensajes genéricos al usuario, pero logs detallados
+- **Nunca exponer**: Stack traces, queries SQL, rutas de archivos, secrets
+
+**Recomendación**:
+```typescript
+if (process.env.NODE_ENV === 'development') {
+  return NextResponse.json({ error: error.message }, { status: 500 })
+}
+return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 })
+```
+
+### 7. Testing
+
+#### ✅ Tests desde el Inicio
+
+**Lección aprendida**: Escribir tests mientras desarrollas, no después:
+- Tests unitarios para lógica de negocio
+- Tests de API para endpoints críticos
+- Tests de integración para flujos completos
+
+**Recomendación**: Configurar Vitest/Jest desde el inicio del proyecto.
+
+### 8. Documentación
+
+#### ✅ Documentar Decisiones de Diseño
+
+**Lección aprendida**: Documentar:
+- **Por qué** se tomaron decisiones de diseño (no solo qué se hizo)
+- Relaciones indirectas y cómo consultarlas
+- Configuraciones importantes
+- Comandos útiles para operaciones comunes
+
+**Recomendación**: Mantener un archivo `DECISIONES.md` o sección en README.
+
+### 9. Migraciones de Base de Datos
+
+#### ✅ Planificar Migraciones
+
+**Lección aprendida**:
+- Usar migraciones de Prisma desde el inicio
+- **Nunca** modificar el schema directamente en producción
+- Probar migraciones en desarrollo primero
+- Hacer backups antes de migraciones en producción
+
+**Recomendación**:
+```bash
+# Desarrollo
+npx prisma migrate dev --name descripcion_cambio
+
+# Producción (después de probar)
+npx prisma migrate deploy
+```
+
+### 10. Variables de Entorno
+
+#### ✅ Documentar Todas las Variables
+
+**Lección aprendida**: Crear un archivo `.env.example` con:
+- Todas las variables necesarias
+- Descripción de cada una
+- Valores de ejemplo (sin secrets reales)
+
+**Recomendación**: Mantener `.env.example` actualizado siempre.
+
+### 11. Autenticación y Autorización
+
+#### ✅ Validar Permisos en Cada Endpoint
+
+**Lección aprendida**:
+- Verificar autenticación (¿está logueado?)
+- Verificar autorización (¿puede hacer esto?)
+- Validar que los recursos pertenecen al usuario/escuela correcta
+
+**Recomendación**: Crear helpers reutilizables:
+```typescript
+async function verificarPermisos(userId: string, escuelaId: string, role: string) {
+  // Lógica de verificación
+}
+```
+
+### 12. Soft Deletes vs Hard Deletes
+
+#### ✅ Considerar Soft Deletes
+
+**Lección aprendida**: Para datos importantes, considerar soft deletes:
+- Agregar campo `deletedAt: DateTime?`
+- Filtrar automáticamente en queries: `WHERE deletedAt IS NULL`
+- Permite recuperar datos accidentalmente eliminados
+
+**Recomendación**: Evaluar caso por caso qué entidades necesitan soft delete.
+
+### 13. Relaciones Many-to-Many
+
+#### ✅ Tablas de Unión Explícitas
+
+**Lección aprendida**: Para relaciones many-to-many, crear tablas de unión explícitas:
+- Permite agregar campos adicionales (fecha, estado, etc.)
+- Facilita consultas y filtros
+- Más claro en el schema
+
+**Ejemplo**:
+```prisma
+model ProfesorEscuela {
+  id         String   @id @default(cuid())
+  profesorId String
+  escuelaId  String
+  activo     Boolean  @default(true)
+  fechaInicio DateTime @default(now())
+  
+  profesor Profesor @relation(fields: [profesorId], references: [id])
+  escuela  Escuela  @relation(fields: [escuelaId], references: [id])
+}
+```
+
+### 14. Timestamps Automáticos
+
+#### ✅ Usar createdAt y updatedAt Siempre
+
+**Lección aprendida**: Agregar timestamps a todas las entidades importantes:
+- Facilita debugging
+- Permite auditorías
+- Útil para reportes y análisis
+
+**Recomendación**: Usar `@default(now())` y `@updatedAt` de Prisma.
+
+### 15. Consultas SQL para Debugging
+
+#### ✅ Documentar Consultas Comunes
+
+**Lección aprendida**: Mantener un archivo o sección con:
+- Consultas SQL útiles para debugging
+- Consultas para relaciones indirectas
+- Consultas para estadísticas
+
+**Recomendación**: Agregar al README una sección "Consultas SQL Útiles" (ya agregada arriba).
+
+### Resumen de Checklist para Futuros Proyectos
+
+- [ ] **Diseño de BD**: Planificar relaciones directas vs indirectas mostrarme diagrama antes
+- [ ] **Documentación**: Documentar relaciones indirectas y cómo consultarlas
+- [ ] **Índices**: Agregar índices desde el inicio para queries frecuentes
+- [ ] **Validación**: Validar en frontend, API y BD
+- [ ] **Logging**: Implementar logging estructurado desde el inicio
+- [ ] **Errores**: Manejar errores de forma segura en producción
+- [ ] **Tests**: Escribir tests mientras se desarrolla
+- [ ] **Documentación**: Documentar decisiones de diseño y "por qué"
+- [ ] **Migraciones**: Usar migraciones desde el inicio
+- [ ] **Variables de entorno**: Documentar todas las variables
+- [ ] **Autenticación**: Validar permisos en cada endpoint
+- [ ] **Soft deletes**: Considerar para datos importantes
+- [ ] **Timestamps**: Agregar a todas las entidades importantes
+- [ ] **Consultas SQL**: Documentar consultas comunes para debugging
+
 ## Licencia
 
 MIT
