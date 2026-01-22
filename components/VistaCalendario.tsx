@@ -34,9 +34,10 @@ export default function VistaCalendario({
   onClaseActualizada,
   onCambiarVista,
 }: VistaCalendarioProps) {
-  if (vista === 'dia') {
-    return <VistaDia fecha={fechaSeleccionada} clases={clases} usuarioId={usuarioId} usuarioRole={usuarioRole} esAdminEscuela={esAdminEscuela} onClaseActualizada={onClaseActualizada} onCambiarVista={onCambiarVista} />
-  }
+  // Comentado temporalmente - Vista Día deshabilitada
+  // if (vista === 'dia') {
+  //   return <VistaDia fecha={fechaSeleccionada} clases={clases} usuarioId={usuarioId} usuarioRole={usuarioRole} esAdminEscuela={esAdminEscuela} onClaseActualizada={onClaseActualizada} onCambiarVista={onCambiarVista} />
+  // }
 
   return <VistaSemana fecha={fechaSeleccionada} clases={clases} usuarioId={usuarioId} usuarioRole={usuarioRole} esAdminEscuela={esAdminEscuela} onClaseActualizada={onClaseActualizada} onCambiarVista={onCambiarVista} />
 }
@@ -154,8 +155,8 @@ function VistaSemana({
         {dias.map((dia) => (
           <div
             key={dia.toISOString()}
-            onClick={() => onCambiarVista?.('dia', dia)}
-            className={`p-4 text-center border-r last:border-r-0 cursor-pointer hover:bg-gray-400 transition-colors ${
+            // onClick={() => onCambiarVista?.('dia', dia)} // Comentado - Vista Día deshabilitada
+            className={`p-4 text-center border-r last:border-r-0 ${/* cursor-pointer hover:bg-gray-400 transition-colors */ ''} ${
               isSameDay(dia, new Date())
                 ? 'bg-primary-50 font-semibold'
                 : 'bg-gray-50'
@@ -236,8 +237,8 @@ function VistaSemana({
             >
               {/* Header del día - estilo planner */}
               <div
-                onClick={() => onCambiarVista?.('dia', dia)}
-                className={`px-4 py-3 rounded-t-lg cursor-pointer hover:opacity-90 transition-opacity ${
+                // onClick={() => onCambiarVista?.('dia', dia)} // Comentado - Vista Día deshabilitada
+                className={`px-4 py-3 rounded-t-lg ${/* cursor-pointer hover:opacity-90 transition-opacity */ ''} ${
                   esHoy ? 'bg-primary-600 text-white' : 'bg-gray-700 text-white'
                 }`}
               >

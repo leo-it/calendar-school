@@ -228,22 +228,23 @@ export default function CalendarioClient({ user }: { user: { id: string; email: 
               </button>
             </div>
             {/* Botón de cambio de vista */}
-            {vista === 'dia' && (
+            {/* Comentado temporalmente - Vista Día deshabilitada */}
+            {/* {vista === 'dia' && (
               <button
                 onClick={() => setVista('semana')}
                 className="w-full sm:w-auto px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-all duration-200 shadow-sm hover:shadow-md active:scale-95 font-medium text-sm sm:text-base"
               >
                 Ver Semana
               </button>
-            )}
-            {vista === 'semana' && (
+            )} */}
+            {/* {vista === 'semana' && (
               <button
                 onClick={() => setVista('dia')}
                 className="w-full sm:w-auto px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-all duration-200 shadow-sm hover:shadow-md active:scale-95 font-medium text-sm sm:text-base"
               >
                 Ver Día
               </button>
-            )}
+            )} */}
           </div>
         </div>
 
