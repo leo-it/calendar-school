@@ -125,7 +125,7 @@ export async function GET(request: NextRequest) {
         const fechaStr = `${año}-${mes}-${dia}`
         clasesGeneradas.push({
           ...clase,
-          fecha: fechaClase,
+          fecha: fechaStr, // Usar string YYYY-MM-DD para evitar problemas de zona horaria
           id: `${clase.id}-${fechaStr}`, // ID único para esta ocurrencia
         })
       })
@@ -136,10 +136,11 @@ export async function GET(request: NextRequest) {
 
     // Ordenar por fecha y hora
     clasesGeneradas.sort((a, b) => {
-      const fechaA = new Date(a.fecha)
-      const fechaB = new Date(b.fecha)
-      if (fechaA.getTime() !== fechaB.getTime()) {
-        return fechaA.getTime() - fechaB.getTime()
+      // Comparar fechas como strings YYYY-MM-DD (ya no son objetos Date)
+      const fechaA = typeof a.fecha === 'string' ? a.fecha : new Date(a.fecha).toISOString().split('T')[0]
+      const fechaB = typeof b.fecha === 'string' ? b.fecha : new Date(b.fecha).toISOString().split('T')[0]
+      if (fechaA !== fechaB) {
+        return fechaA.localeCompare(fechaB)
       }
       return a.horaInicio.localeCompare(b.horaInicio)
     })

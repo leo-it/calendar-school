@@ -4,6 +4,7 @@ import { format, startOfWeek, addDays, parseISO, isSameDay, isSameWeek } from 'd
 import { es } from 'date-fns/locale/es'
 import { Clase, Profesor } from '@prisma/client'
 import TarjetaClase from './TarjetaClase'
+import { parseFechaLocal } from '@/lib/fechas'
 
 type Vista = 'dia' | 'semana'
 
@@ -60,7 +61,7 @@ function VistaDia({
   const clasesDelDia = clases.filter((clase) => {
     if (!clase.fecha) return false
     // Normalizar ambas fechas a medianoche en hora local para comparar correctamente
-    const fechaClase = new Date(clase.fecha.toString())
+    const fechaClase = parseFechaLocal(clase.fecha)
     fechaClase.setHours(0, 0, 0, 0)
     const fechaNormalizada = new Date(fecha)
     fechaNormalizada.setHours(0, 0, 0, 0)
@@ -181,7 +182,7 @@ function VistaSemana({
           const clasesDelDia = clases.filter((clase) => {
             if (!clase.fecha) return false
             // Normalizar ambas fechas a medianoche en hora local para comparar correctamente
-            const fechaClase = new Date(clase.fecha.toString())
+            const fechaClase = parseFechaLocal(clase.fecha)
             fechaClase.setHours(0, 0, 0, 0)
             const diaNormalizado = new Date(dia)
             diaNormalizado.setHours(0, 0, 0, 0)
@@ -219,7 +220,7 @@ function VistaSemana({
           const clasesDelDia = clases.filter((clase) => {
             if (!clase.fecha) return false
             // Normalizar ambas fechas a medianoche en hora local para comparar correctamente
-            const fechaClase = new Date(clase.fecha.toString())
+            const fechaClase = parseFechaLocal(clase.fecha)
             fechaClase.setHours(0, 0, 0, 0)
             const diaNormalizado = new Date(dia)
             diaNormalizado.setHours(0, 0, 0, 0)

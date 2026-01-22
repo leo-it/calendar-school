@@ -6,6 +6,7 @@ import { es } from 'date-fns/locale/es'
 import { Clase, Profesor } from '@prisma/client'
 import { Nivel, Estilo } from '@/types/enums'
 import { generarUrlGoogleCalendar } from '@/lib/google-calendar'
+import { parseFechaLocal, fechaToString } from '@/lib/fechas'
 import Modal from './Modal'
 import { useModal } from './useModal'
 
@@ -167,8 +168,7 @@ export default function ModalClase({
       }
       
       if (clase.fecha && !fechaClase) {
-        const fecha = typeof clase.fecha === 'string' ? new Date(clase.fecha) : clase.fecha
-        fechaClase = fecha.toISOString().split('T')[0]
+        fechaClase = fechaToString(clase.fecha)
       }
 
       const response = await fetch(`/api/clases/${claseIdReal}/subscriptions/manual`, {
@@ -220,8 +220,7 @@ export default function ModalClase({
       }
       
       if (clase.fecha && !fechaClase) {
-        const fecha = typeof clase.fecha === 'string' ? new Date(clase.fecha) : clase.fecha
-        fechaClase = fecha.toISOString().split('T')[0]
+        fechaClase = fechaToString(clase.fecha)
       }
 
       const response = await fetch(`/api/clases/${claseIdReal}/subscriptions/manual`, {
@@ -283,8 +282,7 @@ export default function ModalClase({
       }
       
       if (clase?.fecha && !fechaClase) {
-        const fecha = typeof clase.fecha === 'string' ? new Date(clase.fecha) : clase.fecha
-        fechaClase = fecha.toISOString().split('T')[0]
+        fechaClase = fechaToString(clase.fecha)
       }
 
       const response = await fetch(`/api/clases/${claseIdReal}/subscriptions`, {
@@ -336,8 +334,7 @@ export default function ModalClase({
       
       // Si la clase tiene fecha directamente, usarla
       if (clase.fecha && !fechaClase) {
-        const fecha = typeof clase.fecha === 'string' ? new Date(clase.fecha) : clase.fecha
-        fechaClase = fecha.toISOString().split('T')[0]
+        fechaClase = fechaToString(clase.fecha)
       }
       
       const url = fechaClase 
@@ -371,8 +368,7 @@ export default function ModalClase({
       
       // Si la clase tiene fecha directamente, usarla
       if (clase.fecha && !fechaClase) {
-        const fecha = typeof clase.fecha === 'string' ? new Date(clase.fecha) : clase.fecha
-        fechaClase = fecha.toISOString().split('T')[0]
+        fechaClase = fechaToString(clase.fecha)
       }
       
       const url = fechaClase 
@@ -409,8 +405,7 @@ export default function ModalClase({
       
       // Si la clase tiene fecha directamente, usarla
       if (clase.fecha && !fechaClase) {
-        const fecha = typeof clase.fecha === 'string' ? new Date(clase.fecha) : clase.fecha
-        fechaClase = fecha.toISOString().split('T')[0]
+        fechaClase = fechaToString(clase.fecha)
       }
       
       const response = await fetch('/api/clases/subscribe', {
@@ -479,8 +474,7 @@ export default function ModalClase({
       
       // Si la clase tiene fecha directamente, usarla
       if (clase.fecha && !fechaClase) {
-        const fecha = typeof clase.fecha === 'string' ? new Date(clase.fecha) : clase.fecha
-        fechaClase = fecha.toISOString().split('T')[0]
+        fechaClase = fechaToString(clase.fecha)
       }
       
       const response = await fetch('/api/clases/unsubscribe', {
@@ -618,7 +612,7 @@ export default function ModalClase({
                 <h3 className="text-sm font-semibold text-gray-700 mb-1">Fecha</h3>
                 <p className="text-gray-900">
                   {clase.fecha 
-                    ? format(parseISO(clase.fecha.toString()), "EEEE, d 'de' MMMM 'de' yyyy", { locale: es })
+                    ? format(parseFechaLocal(clase.fecha), "EEEE, d 'de' MMMM 'de' yyyy", { locale: es })
                     : 'Fecha no especificada'}
                 </p>
               </div>

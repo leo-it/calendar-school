@@ -6,6 +6,7 @@ import { format, parseISO } from 'date-fns'
 import { es } from 'date-fns/locale/es'
 import { Clase, Profesor } from '@prisma/client'
 import { Nivel, Estilo } from '@/types/enums'
+import { parseFechaLocal, fechaToString } from '@/lib/fechas'
 import ModalClase from './ModalClase'
 import { generarUrlGoogleCalendar } from '@/lib/google-calendar'
 
@@ -63,8 +64,7 @@ export default function TarjetaClase({
       
       // Si la clase tiene fecha directamente, usarla
       if (clase.fecha && !fechaClase) {
-        const fecha = typeof clase.fecha === 'string' ? new Date(clase.fecha) : clase.fecha
-        fechaClase = fecha.toISOString().split('T')[0]
+        fechaClase = fechaToString(clase.fecha)
       }
       
       const url = fechaClase 
@@ -127,8 +127,7 @@ export default function TarjetaClase({
       
       // Si la clase tiene fecha directamente, usarla
       if (clase.fecha && !fechaClase) {
-        const fecha = typeof clase.fecha === 'string' ? new Date(clase.fecha) : clase.fecha
-        fechaClase = fecha.toISOString().split('T')[0]
+        fechaClase = fechaToString(clase.fecha)
       }
       
       const response = await fetch('/api/clases/subscribe', {
@@ -256,7 +255,7 @@ export default function TarjetaClase({
             <span className="font-medium">Fecha:</span>
             <span className="ml-2">
               {clase.fecha 
-                ? format(parseISO(clase.fecha.toString()), "d 'de' MMMM 'de' yyyy", { locale: es })
+                ? format(parseFechaLocal(clase.fecha), "d 'de' MMMM 'de' yyyy", { locale: es })
                 : 'Fecha no especificada'}
             </span>
           </div>
