@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { format, startOfWeek, addDays, parseISO, isSameDay, isSameWeek } from 'date-fns'
 import { es } from 'date-fns/locale/es'
 import { Clase, Profesor } from '@prisma/client'
@@ -113,6 +114,8 @@ function VistaSemana({
   onClaseActualizada: () => void
   onCambiarVista?: (vista: Vista, fecha?: Date) => void
 }) {
+  const [vistaLandscape, setVistaLandscape] = useState(false)
+
   // Normalizar la fecha a medianoche en hora local primero
   const fechaLocal = new Date(fecha)
   fechaLocal.setHours(0, 0, 0, 0)
@@ -138,9 +141,53 @@ function VistaSemana({
   const mismoMes = dias.every(dia => format(dia, 'MMM yyyy', { locale: es }) === format(inicioSemana, 'MMM yyyy', { locale: es }))
 
   return (
-    <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-      {/* Título con rango de fechas - Oculto en mobile */}
-      <div className="hidden md:block bg-gray-50 border-b px-6 py-3">
+    <>
+      {/* Botón toggle vista landscape - Solo visible en mobile, siempre accesible */}
+      <button
+        onClick={() => setVistaLandscape(!vistaLandscape)}
+        className="md:hidden fixed bottom-6 right-6 z-50 bg-primary-600 text-white p-4 rounded-full shadow-lg hover:bg-primary-700 transition-all duration-200 active:scale-95"
+        aria-label={vistaLandscape ? 'Vista vertical' : 'Vista horizontal'}
+        style={vistaLandscape ? {
+          transform: 'rotate(-90deg)',
+          bottom: '50%',
+          right: '6px',
+          marginBottom: '-20px'
+        } : {}}
+      >
+        <svg 
+          className={`w-6 h-6 transition-transform duration-300 ${vistaLandscape ? 'rotate-180' : ''}`}
+          fill="none" 
+          stroke="currentColor" 
+          viewBox="0 0 24 24"
+        >
+          <path 
+            strokeLinecap="round" 
+            strokeLinejoin="round" 
+            strokeWidth={2} 
+            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" 
+          />
+        </svg>
+      </button>
+
+      <div 
+        className={`bg-white rounded-lg shadow-sm overflow-hidden relative md:transform-none transition-all duration-500 ${vistaLandscape ? 'md:hidden' : ''}`}
+        style={vistaLandscape ? { 
+          transform: 'rotate(90deg)',
+          width: '100vh',
+          height: '100vw',
+          position: 'fixed',
+          top: '50%',
+          left: '50%',
+          marginTop: `calc(-50vw + 80px)`,
+          marginLeft: '-50vh',
+          zIndex: 40,
+          maxHeight: '100vw',
+          maxWidth: '100vh'
+        } : {}}
+      >
+
+      {/* Título con rango de fechas - Visible en desktop o cuando está en vista landscape */}
+      <div className={`${vistaLandscape ? 'block' : 'hidden'} md:block bg-gray-50 border-b px-6 py-3`}>
         <h2 className="text-lg font-semibold text-gray-800">
           {mismoMes ? (
             `${format(inicioSemana, 'd', { locale: es })} - ${format(finSemana, "d 'de' MMMM 'de' yyyy", { locale: es })}`
@@ -150,8 +197,8 @@ function VistaSemana({
         </h2>
       </div>
       
-      {/* Vista Desktop: Grid horizontal */}
-      <div className="hidden md:grid md:grid-cols-7 border-b">
+      {/* Vista Desktop: Grid horizontal - Visible en desktop o cuando está en vista landscape */}
+      <div className={`${vistaLandscape ? 'grid' : 'hidden'} md:grid grid-cols-7 border-b`}>
         {dias.map((dia) => (
           <div
             key={dia.toISOString()}
@@ -177,8 +224,8 @@ function VistaSemana({
         ))}
       </div>
       
-      {/* Vista Desktop: Contenido de clases */}
-      <div className="hidden md:grid md:grid-cols-7 min-h-[400px]">
+      {/* Vista Desktop: Contenido de clases - Visible en desktop o cuando está en vista landscape */}
+      <div className={`${vistaLandscape ? 'grid' : 'hidden'} md:grid grid-cols-7 min-h-[400px]`}>
         {dias.map((dia) => {
           const clasesDelDia = clases.filter((clase) => {
             if (!clase.fecha) return false
@@ -215,8 +262,8 @@ function VistaSemana({
         })}
       </div>
 
-      {/* Vista Mobile: Grid vertical tipo planner */}
-      <div className="md:hidden">
+      {/* Vista Mobile: Grid vertical tipo planner - Oculto cuando está en vista landscape */}
+      <div className={`${vistaLandscape ? 'hidden' : 'block'} md:hidden`}>
         {dias.map((dia) => {
           const clasesDelDia = clases.filter((clase) => {
             if (!clase.fecha) return false
@@ -298,6 +345,7 @@ function VistaSemana({
         })}
       </div>
     </div>
+    </>
   )
 }
 
