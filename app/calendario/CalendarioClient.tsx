@@ -436,7 +436,16 @@ export default function CalendarioClient({ user }: { user: { id: string; email: 
         <footer className="mt-8 border-t border-gray-200 py-6">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <p className="text-center text-sm text-gray-500">
-              © 2026 Leonardo Sainz. Todos los derechos reservados.
+              © 2026{' '}
+              <a 
+                href="https://www.linkedin.com/in/leonardo-sainz/" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-primary-600 hover:text-primary-700 underline"
+              >
+                Leonardo Sainz
+              </a>
+              . Todos los derechos reservados.
             </p>
           </div>
         </footer>

@@ -41,7 +41,7 @@ export default function TarjetaClase({
   
   // Extraer el ID real de la clase (puede ser compuesto como "id-fecha")
   const claseIdReal = clase.id.includes('-') ? clase.id.split('-')[0] : clase.id
-  const puedeEditar = usuarioRole === 'ADMIN' || (usuarioRole === 'PROFESOR' && esAdminEscuela)
+  const puedeEditar = usuarioRole === 'ADMIN' || usuarioRole === 'PROFESOR'
 
   useEffect(() => {
     cargarInscripciones()

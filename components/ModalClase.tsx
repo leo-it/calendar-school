@@ -68,7 +68,7 @@ export default function ModalClase({
   const [creandoNuevo, setCreandoNuevo] = useState(false)
   const { modal, showModal, showConfirm, closeModal } = useModal()
 
-  const puedeEditar = usuarioRole === 'ADMIN' || (usuarioRole === 'PROFESOR' && esAdminEscuela)
+  const puedeEditar = usuarioRole === 'ADMIN' || usuarioRole === 'PROFESOR'
   const esProfesor = usuarioRole === 'PROFESOR'
   const claseIdReal = clase?.id.includes('-') ? clase.id.split('-')[0] : clase?.id || ''
 
