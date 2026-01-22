@@ -48,16 +48,67 @@ interface Invitacion {
   escuela?: Escuela | null
 }
 
+interface Estudiante {
+  id: string
+  email: string
+  name?: string | null
+  apellido?: string | null
+  dni?: string | null
+  phone?: string | null
+  escuelaId?: string | null
+  createdAt: string
+  escuela?: {
+    id: string
+    nombre: string
+  } | null
+}
+
+interface SuscripcionDetalle {
+  id: string
+  userId: string | null
+  claseId: string
+  fecha: string | null
+  createdAt: string
+  clase: {
+    id: string
+    titulo: string
+    descripcion?: string | null
+    diaSemana: number
+    horaInicio: string
+    horaFin: string
+    nivel: string
+    estilo: string
+    lugar: string
+    profesor: {
+      id: string
+      name: string
+    }
+    escuela: {
+      id: string
+      nombre: string
+    }
+  }
+}
+
 export default function AdminPanelClient({ user }: { user: { id: string; email: string; name?: string | null; role: string; esAdminEscuela?: boolean } }) {
   const router = useRouter()
-  const [activeTab, setActiveTab] = useState<'escuelas' | 'clases' | 'invitaciones'>('escuelas')
+  const [activeTab, setActiveTab] = useState<'escuelas' | 'clases' | 'invitaciones' | 'alumnos'>('alumnos')
   const [escuelas, setEscuelas] = useState<Escuela[]>([])
   const [clases, setClases] = useState<Clase[]>([])
   const [invitaciones, setInvitaciones] = useState<Invitacion[]>([])
+  const [estudiantes, setEstudiantes] = useState<Estudiante[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [selectedEstudiante, setSelectedEstudiante] = useState<Estudiante | null>(null)
+  const [suscripcionesDetalle, setSuscripcionesDetalle] = useState<{
+    estudiante: Estudiante
+    suscripcionesPorMes: Record<string, SuscripcionDetalle[]>
+    mesesOrdenados: string[]
+    totalSuscripciones: number
+  } | null>(null)
+  const [loadingDetalle, setLoadingDetalle] = useState(false)
   
-  // Estados para formularios
+  // Form states
   const [showEscuelaForm, setShowEscuelaForm] = useState(false)
   const [editingEscuela, setEditingEscuela] = useState<Escuela | null>(null)
   const [escuelaForm, setEscuelaForm] = useState({
@@ -91,7 +142,7 @@ export default function AdminPanelClient({ user }: { user: { id: string; email: 
         const response = await fetch('/api/clases?inicio=2024-01-01&fin=2024-12-31')
         if (response.ok) {
           const data = await response.json()
-          // Agrupar por clase base (sin duplicados de fechas)
+          // Group by base class (without date duplicates)
           const clasesUnicas = new Map<string, Clase>()
           data.forEach((clase: any) => {
             const baseId = clase.id.split('-')[0]
@@ -109,6 +160,15 @@ export default function AdminPanelClient({ user }: { user: { id: string; email: 
         } else {
           const errorData = await response.json().catch(() => ({}))
           setError(errorData.error || 'Error al cargar invitaciones')
+        }
+      } else if (activeTab === 'alumnos') {
+        const response = await fetch('/api/usuarios/estudiantes')
+        if (response.ok) {
+          const data = await response.json()
+          setEstudiantes(data)
+        } else {
+          const errorData = await response.json().catch(() => ({}))
+          setError(errorData.error || 'Error al cargar alumnos')
         }
       }
     } catch (err) {
@@ -227,7 +287,7 @@ export default function AdminPanelClient({ user }: { user: { id: string; email: 
         return
       }
 
-      // Recargar las clases después de eliminar
+      // Reload classes after deletion
       cargarDatos()
     } catch (err) {
       setError('Error al eliminar clase')
@@ -235,6 +295,50 @@ export default function AdminPanelClient({ user }: { user: { id: string; email: 
   }
 
   const diasSemana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
+
+  const verDetalleAlumno = async (estudiante: Estudiante) => {
+    setSelectedEstudiante(estudiante)
+    setLoadingDetalle(true)
+    setError('')
+    
+    try {
+      const response = await fetch(`/api/usuarios/${estudiante.id}/suscripciones`)
+      if (response.ok) {
+        const data = await response.json()
+        setSuscripcionesDetalle(data)
+      } else {
+        const errorData = await response.json().catch(() => ({}))
+        setError(errorData.error || 'Error al cargar suscripciones')
+      }
+    } catch (err) {
+      setError('Error al cargar suscripciones')
+    } finally {
+      setLoadingDetalle(false)
+    }
+  }
+
+  const cerrarDetalleAlumno = () => {
+    setSelectedEstudiante(null)
+    setSuscripcionesDetalle(null)
+  }
+
+  // Format month key to readable Spanish month name
+  const formatearMes = (mesKey: string): string => {
+    const [año, mes] = mesKey.split('-')
+    const fecha = new Date(parseInt(año), parseInt(mes) - 1, 1)
+    return fecha.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' })
+  }
+
+  // Format date to readable Spanish format
+  const formatearFecha = (fecha: string | null): string => {
+    if (!fecha) return '-'
+    return new Date(fecha).toLocaleDateString('es-AR', { 
+      weekday: 'long', 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    })
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -279,6 +383,16 @@ export default function AdminPanelClient({ user }: { user: { id: string; email: 
               }`}
             >
               Invitaciones Profesores
+            </button>
+            <button
+              onClick={() => setActiveTab('alumnos')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'alumnos'
+                  ? 'border-primary-500 text-primary-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              Alumnos
             </button>
           </nav>
         </div>
@@ -650,7 +764,174 @@ export default function AdminPanelClient({ user }: { user: { id: string; email: 
             )}
           </div>
         )}
+
+        {activeTab === 'alumnos' && (
+          <div>
+            <h2 className="text-xl text-gray-900 font-semibold mb-4">Lista de Alumnos</h2>
+            {loading ? (
+              <div className="text-center py-8">Cargando...</div>
+            ) : (
+              <div className="bg-white shadow rounded-lg overflow-hidden">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nombre</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Apellido</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">DNI</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Teléfono</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Escuela</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {estudiantes.map((estudiante) => (
+                      <tr key={estudiante.id}>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                          {estudiante.name || '-'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {estudiante.apellido || '-'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {estudiante.email}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {estudiante.dni || '-'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {estudiante.phone || '-'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {estudiante.escuela?.nombre || '-'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                          <button
+                            onClick={() => verDetalleAlumno(estudiante)}
+                            className="text-primary-600 hover:text-primary-900"
+                          >
+                            Ver Detalle
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {estudiantes.length === 0 && (
+                  <div className="text-center py-8 text-gray-500">
+                    No hay alumnos registrados
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </div>
+
+      {selectedEstudiante && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+            <div
+              className="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75"
+              onClick={cerrarDetalleAlumno}
+            />
+            <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full">
+              <div className="bg-white px-4 pt-5 pb-4 sm:p-6">
+                <div className="flex justify-between items-start mb-4">
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      Detalle de Alumno
+                    </h3>
+                    <div className="mt-2 text-sm text-gray-600">
+                      <p><strong>Nombre:</strong> {selectedEstudiante.name || '-'} {selectedEstudiante.apellido || ''}</p>
+                      <p><strong>Email:</strong> {selectedEstudiante.email}</p>
+                      {selectedEstudiante.dni && <p><strong>DNI:</strong> {selectedEstudiante.dni}</p>}
+                      {selectedEstudiante.phone && <p><strong>Teléfono:</strong> {selectedEstudiante.phone}</p>}
+                      {selectedEstudiante.escuela && <p><strong>Escuela:</strong> {selectedEstudiante.escuela.nombre}</p>}
+                    </div>
+                  </div>
+                  <button
+                    onClick={cerrarDetalleAlumno}
+                    className="text-gray-400 hover:text-gray-500"
+                  >
+                    <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+
+                {loadingDetalle ? (
+                  <div className="text-center py-8">Cargando suscripciones...</div>
+                ) : suscripcionesDetalle ? (
+                  <div>
+                    <div className="mb-4 text-sm text-gray-600">
+                      <strong>Total de suscripciones:</strong> {suscripcionesDetalle.totalSuscripciones}
+                    </div>
+                    <div className="space-y-6 max-h-[500px] overflow-y-auto pr-2">
+                      {suscripcionesDetalle.mesesOrdenados.map((mesKey) => (
+                        <div key={mesKey} className="border-b border-gray-200 pb-4 last:border-b-0">
+                          <h4 className="text-md font-semibold text-gray-900 mb-3 capitalize">
+                            {formatearMes(mesKey)}
+                          </h4>
+                          <div className="space-y-2">
+                            {suscripcionesDetalle.suscripcionesPorMes[mesKey].map((sub) => (
+                              <div
+                                key={sub.id}
+                                className="bg-gray-50 p-4 rounded-lg border border-gray-200 hover:bg-gray-100 transition-colors"
+                              >
+                                <div className="flex justify-between items-start gap-4">
+                                  <div className="flex-1 min-w-0">
+                                    <p className="font-medium text-gray-900 mb-1">{sub.clase.titulo}</p>
+                                    <p className="text-sm text-gray-600 mb-1">
+                                      {diasSemana[sub.clase.diaSemana]} - {sub.clase.horaInicio} a {sub.clase.horaFin}
+                                    </p>
+                                    <p className="text-sm text-gray-500 mb-1">
+                                      Profesor: {sub.clase.profesor.name} | {sub.clase.escuela.nombre}
+                                    </p>
+                                    <p className="text-sm text-gray-500">
+                                      {sub.clase.nivel} - {sub.clase.estilo} | {sub.clase.lugar}
+                                    </p>
+                                  </div>
+                                  <div className="text-right flex-shrink-0">
+                                    <span className="inline-block px-2 py-1 text-xs font-medium text-gray-700 bg-white rounded border border-gray-300">
+                                      {formatearFecha(sub.fecha)}
+                                    </span>
+                                    <p className="text-xs text-gray-400 mt-2">
+                                      Inscrito: {new Date(sub.createdAt).toLocaleDateString('es-AR')}
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                      {suscripcionesDetalle.mesesOrdenados.length === 0 && (
+                        <div className="text-center py-8 text-gray-500">
+                          El alumno no tiene suscripciones registradas
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    No se pudieron cargar las suscripciones
+                  </div>
+                )}
+              </div>
+              <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                <button
+                  type="button"
+                  className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-primary-600 text-base font-medium text-white hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 sm:ml-3 sm:w-auto sm:text-sm"
+                  onClick={cerrarDetalleAlumno}
+                >
+                  Cerrar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
